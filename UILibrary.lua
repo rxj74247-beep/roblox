@@ -6,10 +6,12 @@ local LocalPlayer = game:GetService("Players").LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local PrimaryColor = Color3.fromRGB(30, 30, 30)
 local SecondaryColor = Color3.fromRGB(44, 120, 224)
+local TextColor = Color3.fromRGB(255, 255, 255)
 local CloseBind = Enum.KeyCode.RightControl
 
 local SecondaryElements = {}
 local PrimaryElements = {}
+local TextElements = {}
 
 local function RegisterSecondaryElement(obj, prop)
 	prop = prop or "BackgroundColor3"
@@ -24,6 +26,13 @@ local function RegisterPrimaryElement(obj, prop)
 	table.insert(PrimaryElements, {obj = obj, prop = prop})
 	if obj then
 		obj[prop] = PrimaryColor
+	end
+end
+
+local function RegisterTextElement(obj)
+	table.insert(TextElements, obj)
+	if obj then
+		obj.TextColor3 = TextColor
 	end
 end
 
@@ -45,6 +54,17 @@ local function UpdateAllPrimaryElements()
 			entry.obj[entry.prop] = PrimaryColor
 		else
 			table.remove(PrimaryElements, i)
+		end
+	end
+end
+
+local function UpdateAllTextElements()
+	for i = #TextElements, 1, -1 do
+		local obj = TextElements[i]
+		if obj and obj.Parent then
+			obj.TextColor3 = TextColor
+		else
+			table.remove(TextElements, i)
 		end
 	end
 end
@@ -219,6 +239,11 @@ function lib:Window(text, secondary, closebind, primary)
 		lib:ChangeSecondaryColor(toch)
 	end
 
+	function lib:ChangeTextColor(toch)
+		TextColor = toch
+		UpdateAllTextElements()
+	end
+
 	function lib:Notification(texttitle, textdesc, textbtn)
 		local NotificationHold = Instance.new("TextButton")
 		local NotificationFrame = Instance.new("Frame")
@@ -288,9 +313,10 @@ function lib:Window(text, secondary, closebind, primary)
 		OkayBtnTitle.Size = UDim2.new(0, 181, 0, 42)
 		OkayBtnTitle.Font = Enum.Font.Gotham
 		OkayBtnTitle.Text = textbtn
-		OkayBtnTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+		OkayBtnTitle.TextColor3 = TextColor
 		OkayBtnTitle.TextSize = 14.000
 		OkayBtnTitle.TextXAlignment = Enum.TextXAlignment.Left
+		RegisterTextElement(OkayBtnTitle)
 
 		NotificationTitle.Name = "NotificationTitle"
 		NotificationTitle.Parent = NotificationFrame
@@ -300,9 +326,10 @@ function lib:Window(text, secondary, closebind, primary)
 		NotificationTitle.Size = UDim2.new(0, 143, 0, 26)
 		NotificationTitle.Font = Enum.Font.Gotham
 		NotificationTitle.Text = texttitle
-		NotificationTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+		NotificationTitle.TextColor3 = TextColor
 		NotificationTitle.TextSize = 18.000
 		NotificationTitle.TextXAlignment = Enum.TextXAlignment.Left
+		RegisterTextElement(NotificationTitle)
 
 		NotificationDesc.Name = "NotificationDesc"
 		NotificationDesc.Parent = NotificationFrame
@@ -312,11 +339,12 @@ function lib:Window(text, secondary, closebind, primary)
 		NotificationDesc.Size = UDim2.new(0, 143, 0, 91)
 		NotificationDesc.Font = Enum.Font.Gotham
 		NotificationDesc.Text = textdesc
-		NotificationDesc.TextColor3 = Color3.fromRGB(255, 255, 255)
+		NotificationDesc.TextColor3 = TextColor
 		NotificationDesc.TextSize = 15.000
 		NotificationDesc.TextWrapped = true
 		NotificationDesc.TextXAlignment = Enum.TextXAlignment.Left
 		NotificationDesc.TextYAlignment = Enum.TextYAlignment.Top
+		RegisterTextElement(NotificationDesc)
 
 		OkayBtn.MouseEnter:Connect(function()
 			TweenService:Create(
@@ -416,7 +444,7 @@ function lib:Window(text, secondary, closebind, primary)
 		if fs == false then
 			fs = true
 			TabBtnIndicator.Size = UDim2.new(0, 13, 0, 2)
-			TabTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+			TabTitle.TextColor3 = TextColor
 			Tab.Visible = true
 		end
 
@@ -451,7 +479,7 @@ function lib:Window(text, secondary, closebind, primary)
 					TweenService:Create(
 						TabTitle,
 						TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{TextColor3 = Color3.fromRGB(255, 255, 255)}
+						{TextColor3 = TextColor}
 					):Play()
 				end
 			end
@@ -485,9 +513,10 @@ function lib:Window(text, secondary, closebind, primary)
 			ButtonTitle.Size = UDim2.new(0, 187, 0, 42)
 			ButtonTitle.Font = Enum.Font.Gotham
 			ButtonTitle.Text = text
-			ButtonTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+			ButtonTitle.TextColor3 = TextColor
 			ButtonTitle.TextSize = 14.000
 			ButtonTitle.TextXAlignment = Enum.TextXAlignment.Left
+			RegisterTextElement(ButtonTitle)
 
 			Button.MouseEnter:Connect(function()
 				TweenService:Create(
@@ -550,9 +579,10 @@ function lib:Window(text, secondary, closebind, primary)
 			ToggleTitle.Size = UDim2.new(0, 187, 0, 42)
 			ToggleTitle.Font = Enum.Font.Gotham
 			ToggleTitle.Text = text
-			ToggleTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+			ToggleTitle.TextColor3 = TextColor
 			ToggleTitle.TextSize = 14.000
 			ToggleTitle.TextXAlignment = Enum.TextXAlignment.Left
+			RegisterTextElement(ToggleTitle)
 
 			FrameToggle1.Name = "FrameToggle1"
 			FrameToggle1.Parent = Toggle
@@ -738,9 +768,10 @@ function lib:Window(text, secondary, closebind, primary)
 			SliderTitle.Size = UDim2.new(0, 187, 0, 42)
 			SliderTitle.Font = Enum.Font.Gotham
 			SliderTitle.Text = text
-			SliderTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+			SliderTitle.TextColor3 = TextColor
 			SliderTitle.TextSize = 14.000
 			SliderTitle.TextXAlignment = Enum.TextXAlignment.Left
+			RegisterTextElement(SliderTitle)
 
 			SliderValue.Name = "SliderValue"
 			SliderValue.Parent = Slider
@@ -750,9 +781,10 @@ function lib:Window(text, secondary, closebind, primary)
 			SliderValue.Size = UDim2.new(0, 335, 0, 42)
 			SliderValue.Font = Enum.Font.Gotham
 			SliderValue.Text = tostring(start and math.floor((start / max) * (max - min) + min) or 0)
-			SliderValue.TextColor3 = Color3.fromRGB(255, 255, 255)
+			SliderValue.TextColor3 = TextColor
 			SliderValue.TextSize = 14.000
 			SliderValue.TextXAlignment = Enum.TextXAlignment.Right
+			RegisterTextElement(SliderValue)
 
 			SlideFrame.Name = "SlideFrame"
 			SlideFrame.Parent = Slider
@@ -868,9 +900,10 @@ function lib:Window(text, secondary, closebind, primary)
 			DropdownTitle.Size = UDim2.new(0, 187, 0, 42)
 			DropdownTitle.Font = Enum.Font.Gotham
 			DropdownTitle.Text = text
-			DropdownTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+			DropdownTitle.TextColor3 = TextColor
 			DropdownTitle.TextSize = 14.000
 			DropdownTitle.TextXAlignment = Enum.TextXAlignment.Left
+			RegisterTextElement(DropdownTitle)
 
 			ArrowImg.Name = "ArrowImg"
 			ArrowImg.Parent = DropdownTitle
@@ -947,8 +980,9 @@ function lib:Window(text, secondary, closebind, primary)
 				Item.AutoButtonColor = false
 				Item.Font = Enum.Font.Gotham
 				Item.Text = v
-				Item.TextColor3 = Color3.fromRGB(255, 255, 255)
+				Item.TextColor3 = TextColor
 				Item.TextSize = 15.000
+				RegisterTextElement(Item)
 
 				ItemCorner.CornerRadius = UDim.new(0, 4)
 				ItemCorner.Name = "ItemCorner"
@@ -1053,9 +1087,10 @@ function lib:Window(text, secondary, closebind, primary)
 			ColorpickerTitle.Size = UDim2.new(0, 187, 0, 42)
 			ColorpickerTitle.Font = Enum.Font.Gotham
 			ColorpickerTitle.Text = text
-			ColorpickerTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+			ColorpickerTitle.TextColor3 = TextColor
 			ColorpickerTitle.TextSize = 14.000
 			ColorpickerTitle.TextXAlignment = Enum.TextXAlignment.Left
+			RegisterTextElement(ColorpickerTitle)
 
 			BoxColor.Name = "BoxColor"
 			BoxColor.Parent = ColorpickerTitle
@@ -1089,9 +1124,10 @@ function lib:Window(text, secondary, closebind, primary)
 			ConfirmBtnTitle.Size = UDim2.new(0, 33, 0, 32)
 			ConfirmBtnTitle.Font = Enum.Font.Gotham
 			ConfirmBtnTitle.Text = "Confirm"
-			ConfirmBtnTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+			ConfirmBtnTitle.TextColor3 = TextColor
 			ConfirmBtnTitle.TextSize = 14.000
 			ConfirmBtnTitle.TextXAlignment = Enum.TextXAlignment.Left
+			RegisterTextElement(ConfirmBtnTitle)
 
 			ColorpickerBtn.Name = "ColorpickerBtn"
 			ColorpickerBtn.Parent = ColorpickerTitle
@@ -1125,9 +1161,10 @@ function lib:Window(text, secondary, closebind, primary)
 			RainbowToggleTitle.Size = UDim2.new(0, 33, 0, 32)
 			RainbowToggleTitle.Font = Enum.Font.Gotham
 			RainbowToggleTitle.Text = "Rainbow"
-			RainbowToggleTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+			RainbowToggleTitle.TextColor3 = TextColor
 			RainbowToggleTitle.TextSize = 14.000
 			RainbowToggleTitle.TextXAlignment = Enum.TextXAlignment.Left
+			RegisterTextElement(RainbowToggleTitle)
 
 			FrameRainbowToggle1.Name = "FrameRainbowToggle1"
 			FrameRainbowToggle1.Parent = RainbowToggle
@@ -1452,9 +1489,10 @@ function lib:Window(text, secondary, closebind, primary)
 			LabelTitle.Size = UDim2.new(0, 187, 0, 42)
 			LabelTitle.Font = Enum.Font.Gotham
 			LabelTitle.Text = text
-			LabelTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+			LabelTitle.TextColor3 = TextColor
 			LabelTitle.TextSize = 14.000
 			LabelTitle.TextXAlignment = Enum.TextXAlignment.Left
+			RegisterTextElement(LabelTitle)
 
 			function FunctionsTableLabel:Set(newText)
 				text = newText
@@ -1492,9 +1530,10 @@ function lib:Window(text, secondary, closebind, primary)
 			TextboxTitle.Size = UDim2.new(0, 187, 0, 42)
 			TextboxTitle.Font = Enum.Font.Gotham
 			TextboxTitle.Text = text
-			TextboxTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+			TextboxTitle.TextColor3 = TextColor
 			TextboxTitle.TextSize = 14.000
 			TextboxTitle.TextXAlignment = Enum.TextXAlignment.Left
+			RegisterTextElement(TextboxTitle)
 
 			TextboxFrame.Name = "TextboxFrame"
 			TextboxFrame.Parent = TextboxTitle
@@ -1512,8 +1551,9 @@ function lib:Window(text, secondary, closebind, primary)
 			TextBox.Size = UDim2.new(0, 100, 0, 23)
 			TextBox.Font = Enum.Font.Gotham
 			TextBox.Text = ""
-			TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+			TextBox.TextColor3 = TextColor
 			TextBox.TextSize = 14.000
+			RegisterTextElement(TextBox)
 
 			TextBox.FocusLost:Connect(function(ep)
 				if ep then
@@ -1558,9 +1598,10 @@ function lib:Window(text, secondary, closebind, primary)
 			BindTitle.Size = UDim2.new(0, 187, 0, 42)
 			BindTitle.Font = Enum.Font.Gotham
 			BindTitle.Text = text
-			BindTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+			BindTitle.TextColor3 = TextColor
 			BindTitle.TextSize = 14.000
 			BindTitle.TextXAlignment = Enum.TextXAlignment.Left
+			RegisterTextElement(BindTitle)
 
 			BindText.Name = "BindText"
 			BindText.Parent = Bind
@@ -1570,9 +1611,10 @@ function lib:Window(text, secondary, closebind, primary)
 			BindText.Size = UDim2.new(0, 337, 0, 42)
 			BindText.Font = Enum.Font.Gotham
 			BindText.Text = Key
-			BindText.TextColor3 = Color3.fromRGB(255, 255, 255)
+			BindText.TextColor3 = TextColor
 			BindText.TextSize = 14.000
 			BindText.TextXAlignment = Enum.TextXAlignment.Right
+			RegisterTextElement(BindText)
 
 			Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
 
