@@ -1,13 +1,3 @@
---[[
-	Optimized UI Library (performance fixed)
-	Original lag causes fixed:
-	- Removed per-element infinite while-wait() color update loops (main FPS killer)
-	- Color elements now register once; ChangePresetColor updates them in a single pass
-	- Slider InputChanged connections are now temporary (only while dragging)
-	- Replaced wait()/coroutine.wrap with task.wait()/task.spawn
-	- Minor modernizations (Connect/Wait)
-]]
-
 local lib = {RainbowColorValue = 0, HueSelectionPosition = 0}
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
