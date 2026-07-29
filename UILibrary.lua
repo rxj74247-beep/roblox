@@ -862,6 +862,8 @@ function lib:Window(text, secondary, closebind, primary)
 			local droptog = false
 			local framesize = 0
 			local itemcount = 0
+			local currentList = list or {}
+			local DropdownAPI = {}
 
 			local Dropdown = Instance.new("Frame")
 			local DropdownCorner = Instance.new("UICorner")
@@ -928,6 +930,111 @@ function lib:Window(text, secondary, closebind, primary)
 			DropLayout.Parent = DropItemHolder
 			DropLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
+			local function CloseDropdown()
+				if droptog then
+					droptog = false
+					Dropdown:TweenSize(
+						UDim2.new(0, 363, 0, 42),
+						Enum.EasingDirection.Out,
+						Enum.EasingStyle.Quart,
+						.2,
+						true
+					)
+					TweenService:Create(
+						ArrowImg,
+						TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+						{Rotation = 0}
+					):Play()
+					task.wait(.2)
+					Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+				end
+			end
+
+			local function CreateItems(itemList)
+				for _, child in ipairs(DropItemHolder:GetChildren()) do
+					if child:IsA("TextButton") then
+						child:Destroy()
+					end
+				end
+
+				framesize = 0
+				itemcount = 0
+				currentList = itemList or {}
+
+				for _, v in next, currentList do
+					itemcount = itemcount + 1
+					if itemcount <= 3 then
+						framesize = framesize + 26
+						DropItemHolder.Size = UDim2.new(0, 342, 0, framesize)
+					end
+
+					local Item = Instance.new("TextButton")
+					local ItemCorner = Instance.new("UICorner")
+
+					Item.Name = "Item"
+					Item.Parent = DropItemHolder
+					Item.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+					Item.ClipsDescendants = true
+					Item.Size = UDim2.new(0, 335, 0, 25)
+					Item.AutoButtonColor = false
+					Item.Font = Enum.Font.Gotham
+					Item.Text = v
+					Item.TextColor3 = TextColor
+					Item.TextSize = 15.000
+					RegisterTextElement(Item)
+
+					ItemCorner.CornerRadius = UDim.new(0, 4)
+					ItemCorner.Name = "ItemCorner"
+					ItemCorner.Parent = Item
+
+					Item.MouseEnter:Connect(function()
+						TweenService:Create(
+							Item,
+							TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+							{BackgroundColor3 = Color3.fromRGB(37, 37, 37)}
+						):Play()
+					end)
+
+					Item.MouseLeave:Connect(function()
+						TweenService:Create(
+							Item,
+							TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+							{BackgroundColor3 = Color3.fromRGB(34, 34, 34)}
+						):Play()
+					end)
+
+					Item.MouseButton1Click:Connect(function()
+						droptog = false
+						DropdownTitle.Text = text .. " - " .. v
+						pcall(callback, v)
+						Dropdown:TweenSize(
+							UDim2.new(0, 363, 0, 42),
+							Enum.EasingDirection.Out,
+							Enum.EasingStyle.Quart,
+							.2,
+							true
+						)
+						TweenService:Create(
+							ArrowImg,
+							TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+							{Rotation = 0}
+						):Play()
+						task.wait(.2)
+						Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+					end)
+
+					DropItemHolder.CanvasSize = UDim2.new(0, 0, 0, DropLayout.AbsoluteContentSize.Y)
+				end
+
+				if itemcount == 0 then
+					DropItemHolder.Size = UDim2.new(0, 342, 0, 0)
+				elseif itemcount > 3 then
+					DropItemHolder.Size = UDim2.new(0, 342, 0, 78)
+				end
+
+				DropItemHolder.CanvasSize = UDim2.new(0, 0, 0, DropLayout.AbsoluteContentSize.Y)
+			end
+
 			DropdownBtn.MouseButton1Click:Connect(function()
 				if droptog == false then
 					Dropdown:TweenSize(
@@ -963,70 +1070,24 @@ function lib:Window(text, secondary, closebind, primary)
 				droptog = not droptog
 			end)
 
-			for _, v in next, list do
-				itemcount = itemcount + 1
-				if itemcount <= 3 then
-					framesize = framesize + 26
-					DropItemHolder.Size = UDim2.new(0, 342, 0, framesize)
-				end
-				local Item = Instance.new("TextButton")
-				local ItemCorner = Instance.new("UICorner")
-
-				Item.Name = "Item"
-				Item.Parent = DropItemHolder
-				Item.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
-				Item.ClipsDescendants = true
-				Item.Size = UDim2.new(0, 335, 0, 25)
-				Item.AutoButtonColor = false
-				Item.Font = Enum.Font.Gotham
-				Item.Text = v
-				Item.TextColor3 = TextColor
-				Item.TextSize = 15.000
-				RegisterTextElement(Item)
-
-				ItemCorner.CornerRadius = UDim.new(0, 4)
-				ItemCorner.Name = "ItemCorner"
-				ItemCorner.Parent = Item
-
-				Item.MouseEnter:Connect(function()
-					TweenService:Create(
-						Item,
-						TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{BackgroundColor3 = Color3.fromRGB(37, 37, 37)}
-					):Play()
-				end)
-
-				Item.MouseLeave:Connect(function()
-					TweenService:Create(
-						Item,
-						TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{BackgroundColor3 = Color3.fromRGB(34, 34, 34)}
-					):Play()
-				end)
-
-				Item.MouseButton1Click:Connect(function()
-					droptog = not droptog
-					DropdownTitle.Text = text .. " - " .. v
-					pcall(callback, v)
-					Dropdown:TweenSize(
-						UDim2.new(0, 363, 0, 42),
-						Enum.EasingDirection.Out,
-						Enum.EasingStyle.Quart,
-						.2,
-						true
-					)
-					TweenService:Create(
-						ArrowImg,
-						TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{Rotation = 0}
-					):Play()
-					task.wait(.2)
-					Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
-				end)
-
-				DropItemHolder.CanvasSize = UDim2.new(0, 0, 0, DropLayout.AbsoluteContentSize.Y)
-			end
+			CreateItems(currentList)
 			Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+
+			function DropdownAPI:UpdateList(newList)
+				CloseDropdown()
+				CreateItems(newList)
+				Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+			end
+
+			function DropdownAPI:UpdateSelected(value)
+				if value == nil or value == "" then
+					DropdownTitle.Text = text
+				else
+					DropdownTitle.Text = text .. " - " .. tostring(value)
+				end
+			end
+
+			return DropdownAPI
 		end
 
 		function tabcontent:Colorpicker(text, preset, callback)
