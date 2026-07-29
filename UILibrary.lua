@@ -4,27 +4,47 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local LocalPlayer = game:GetService("Players").LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
-local PresetColor = Color3.fromRGB(44, 120, 224)
+local PrimaryColor = Color3.fromRGB(30, 30, 30)
+local SecondaryColor = Color3.fromRGB(44, 120, 224)
 local CloseBind = Enum.KeyCode.RightControl
 
--- Performance: single list of elements that need PresetColor updates
-local ColorElements = {} -- { {obj = Instance, prop = "BackgroundColor3"|"ImageColor3"}, ... }
+local SecondaryElements = {}
+local PrimaryElements = {}
 
-local function RegisterColorElement(obj, prop)
+local function RegisterSecondaryElement(obj, prop)
 	prop = prop or "BackgroundColor3"
-	table.insert(ColorElements, {obj = obj, prop = prop})
+	table.insert(SecondaryElements, {obj = obj, prop = prop})
 	if obj then
-		obj[prop] = PresetColor
+		obj[prop] = SecondaryColor
 	end
 end
 
-local function UpdateAllColorElements()
-	for i = #ColorElements, 1, -1 do
-		local entry = ColorElements[i]
+local function RegisterPrimaryElement(obj, prop)
+	prop = prop or "BackgroundColor3"
+	table.insert(PrimaryElements, {obj = obj, prop = prop})
+	if obj then
+		obj[prop] = PrimaryColor
+	end
+end
+
+local function UpdateAllSecondaryElements()
+	for i = #SecondaryElements, 1, -1 do
+		local entry = SecondaryElements[i]
 		if entry.obj and entry.obj.Parent then
-			entry.obj[entry.prop] = PresetColor
+			entry.obj[entry.prop] = SecondaryColor
 		else
-			table.remove(ColorElements, i)
+			table.remove(SecondaryElements, i)
+		end
+	end
+end
+
+local function UpdateAllPrimaryElements()
+	for i = #PrimaryElements, 1, -1 do
+		local entry = PrimaryElements[i]
+		if entry.obj and entry.obj.Parent then
+			entry.obj[entry.prop] = PrimaryColor
+		else
+			table.remove(PrimaryElements, i)
 		end
 	end
 end
@@ -34,7 +54,6 @@ ui.Name = "ui"
 ui.Parent = game.CoreGui
 ui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Single rainbow loop (was already only one, now using task)
 task.spawn(function()
 	while true do
 		lib.RainbowColorValue = lib.RainbowColorValue + 1 / 255
@@ -95,9 +114,10 @@ local function MakeDraggable(topbarobject, object)
 	end)
 end
 
-function lib:Window(text, preset, closebind)
+function lib:Window(text, secondary, closebind, primary)
 	CloseBind = closebind or Enum.KeyCode.RightControl
-	PresetColor = preset or Color3.fromRGB(44, 120, 224)
+	SecondaryColor = secondary or Color3.fromRGB(44, 120, 224)
+	PrimaryColor = primary or Color3.fromRGB(30, 30, 30)
 	local fs = false
 
 	local Main = Instance.new("Frame")
@@ -110,12 +130,14 @@ function lib:Window(text, preset, closebind)
 	Main.Name = "Main"
 	Main.Parent = ui
 	Main.AnchorPoint = Vector2.new(0.5, 0.5)
-	Main.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	Main.BackgroundColor3 = PrimaryColor
 	Main.BorderSizePixel = 0
 	Main.Position = UDim2.new(0.5, 0, 0.5, 0)
 	Main.Size = UDim2.new(0, 0, 0, 0)
 	Main.ClipsDescendants = true
 	Main.Visible = true
+
+	RegisterPrimaryElement(Main)
 
 	TabHold.Name = "TabHold"
 	TabHold.Parent = Main
@@ -183,9 +205,18 @@ function lib:Window(text, preset, closebind)
 	TabFolder.Name = "TabFolder"
 	TabFolder.Parent = Main
 
+	function lib:ChangeSecondaryColor(toch)
+		SecondaryColor = toch
+		UpdateAllSecondaryElements()
+	end
+
+	function lib:ChangePrimaryColor(toch)
+		PrimaryColor = toch
+		UpdateAllPrimaryElements()
+	end
+
 	function lib:ChangePresetColor(toch)
-		PresetColor = toch
-		UpdateAllColorElements()
+		lib:ChangeSecondaryColor(toch)
 	end
 
 	function lib:Notification(texttitle, textdesc, textbtn)
@@ -219,10 +250,12 @@ function lib:Window(text, preset, closebind)
 		NotificationFrame.Name = "NotificationFrame"
 		NotificationFrame.Parent = NotificationHold
 		NotificationFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-		NotificationFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+		NotificationFrame.BackgroundColor3 = PrimaryColor
 		NotificationFrame.BorderSizePixel = 0
 		NotificationFrame.ClipsDescendants = true
 		NotificationFrame.Position = UDim2.new(0.5, 0, 0.498432577, 0)
+
+		RegisterPrimaryElement(NotificationFrame)
 
 		NotificationFrame:TweenSize(
 			UDim2.new(0, 164, 0, 193),
@@ -350,7 +383,7 @@ function lib:Window(text, preset, closebind)
 
 		TabBtnIndicator.Name = "TabBtnIndicator"
 		TabBtnIndicator.Parent = TabBtn
-		TabBtnIndicator.BackgroundColor3 = PresetColor
+		TabBtnIndicator.BackgroundColor3 = SecondaryColor
 		TabBtnIndicator.BorderSizePixel = 0
 		TabBtnIndicator.Position = UDim2.new(0, 0, 1, 0)
 		TabBtnIndicator.Size = UDim2.new(0, 0, 0, 2)
@@ -358,8 +391,7 @@ function lib:Window(text, preset, closebind)
 		TabBtnIndicatorCorner.Name = "TabBtnIndicatorCorner"
 		TabBtnIndicatorCorner.Parent = TabBtnIndicator
 
-		-- PERFORMANCE FIX: register once instead of infinite loop
-		RegisterColorElement(TabBtnIndicator)
+		RegisterSecondaryElement(TabBtnIndicator)
 
 		local Tab = Instance.new("ScrollingFrame")
 		local TabLayout = Instance.new("UIListLayout")
@@ -542,7 +574,7 @@ function lib:Window(text, preset, closebind)
 
 			FrameToggle3.Name = "FrameToggle3"
 			FrameToggle3.Parent = FrameToggle1
-			FrameToggle3.BackgroundColor3 = PresetColor
+			FrameToggle3.BackgroundColor3 = SecondaryColor
 			FrameToggle3.BackgroundTransparency = 1.000
 			FrameToggle3.Size = UDim2.new(0, 37, 0, 18)
 
@@ -558,8 +590,7 @@ function lib:Window(text, preset, closebind)
 			FrameToggleCircleCorner.Name = "FrameToggleCircleCorner"
 			FrameToggleCircleCorner.Parent = FrameToggleCircle
 
-			-- PERFORMANCE FIX: register once instead of infinite loop
-			RegisterColorElement(FrameToggle3)
+			RegisterSecondaryElement(FrameToggle3)
 
 			Toggle.MouseButton1Click:Connect(function()
 				if toggled == false then
@@ -732,22 +763,21 @@ function lib:Window(text, preset, closebind)
 
 			CurrentValueFrame.Name = "CurrentValueFrame"
 			CurrentValueFrame.Parent = SlideFrame
-			CurrentValueFrame.BackgroundColor3 = PresetColor
+			CurrentValueFrame.BackgroundColor3 = SecondaryColor
 			CurrentValueFrame.BorderSizePixel = 0
 			CurrentValueFrame.Size = UDim2.new((start or 0) / max, 0, 0, 3)
 
 			SlideCircle.Name = "SlideCircle"
 			SlideCircle.Parent = SlideFrame
-			SlideCircle.BackgroundColor3 = PresetColor
+			SlideCircle.BackgroundColor3 = SecondaryColor
 			SlideCircle.BackgroundTransparency = 1.000
 			SlideCircle.Position = UDim2.new((start or 0) / max, -6, -1.30499995, 0)
 			SlideCircle.Size = UDim2.new(0, 11, 0, 11)
 			SlideCircle.Image = "rbxassetid://3570695787"
-			SlideCircle.ImageColor3 = PresetColor
+			SlideCircle.ImageColor3 = SecondaryColor
 
-			-- PERFORMANCE FIX: register once instead of infinite loop
-			RegisterColorElement(CurrentValueFrame)
-			RegisterColorElement(SlideCircle, "ImageColor3")
+			RegisterSecondaryElement(CurrentValueFrame)
+			RegisterSecondaryElement(SlideCircle, "ImageColor3")
 
 			local function move(input)
 				local pos = UDim2.new(
@@ -769,7 +799,6 @@ function lib:Window(text, preset, closebind)
 				pcall(callback, value)
 			end
 
-			-- PERFORMANCE FIX: connect InputChanged ONLY while dragging
 			SlideCircle.InputBegan:Connect(function(input)
 				if input.UserInputType == Enum.UserInputType.MouseButton1 then
 					dragging = true
@@ -1136,8 +1165,7 @@ function lib:Window(text, preset, closebind)
 			FrameRainbowToggleCircleCorner.Name = "FrameRainbowToggleCircleCorner"
 			FrameRainbowToggleCircleCorner.Parent = FrameRainbowToggleCircle
 
-			-- PERFORMANCE FIX: register once instead of infinite loop
-			RegisterColorElement(FrameRainbowToggle3)
+			RegisterSecondaryElement(FrameRainbowToggle3)
 
 			Color.Name = "Color"
 			Color.Parent = ColorpickerTitle
