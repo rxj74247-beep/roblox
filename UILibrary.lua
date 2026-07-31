@@ -12,12 +12,46 @@ local CloseBind = Enum.KeyCode.RightControl
 local SecondaryElements = {}
 local PrimaryElements = {}
 local TextElements = {}
+local SecondaryCallbacks = {}
+local PrimaryCallbacks = {}
+local TextCallbacks = {}
+
+local function ToColor3(c)
+	if typeof(c) == "Color3" then
+		return c
+	end
+	if type(c) == "table" then
+		if typeof(c.R) == "number" and typeof(c.G) == "number" and typeof(c.B) == "number" then
+			local r, g, b = c.R, c.G, c.B
+			if r > 1 or g > 1 or b > 1 then
+				return Color3.fromRGB(r, g, b)
+			end
+			return Color3.new(r, g, b)
+		end
+		if typeof(c[1]) == "number" and typeof(c[2]) == "number" and typeof(c[3]) == "number" then
+			local r, g, b = c[1], c[2], c[3]
+			if r > 1 or g > 1 or b > 1 then
+				return Color3.fromRGB(r, g, b)
+			end
+			return Color3.new(r, g, b)
+		end
+	end
+	if type(c) == "string" then
+		local r, g, b = string.match(c, "(%d+),%s*(%d+),%s*(%d+)")
+		if r and g and b then
+			return Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
+		end
+	end
+	return nil
+end
 
 local function RegisterSecondaryElement(obj, prop)
 	prop = prop or "BackgroundColor3"
 	table.insert(SecondaryElements, {obj = obj, prop = prop})
 	if obj then
-		obj[prop] = SecondaryColor
+		pcall(function()
+			obj[prop] = SecondaryColor
+		end)
 	end
 end
 
@@ -25,24 +59,48 @@ local function RegisterPrimaryElement(obj, prop)
 	prop = prop or "BackgroundColor3"
 	table.insert(PrimaryElements, {obj = obj, prop = prop})
 	if obj then
-		obj[prop] = PrimaryColor
+		pcall(function()
+			obj[prop] = PrimaryColor
+		end)
 	end
 end
 
 local function RegisterTextElement(obj)
 	table.insert(TextElements, obj)
 	if obj then
-		obj.TextColor3 = TextColor
+		pcall(function()
+			obj.TextColor3 = TextColor
+		end)
 	end
+end
+
+local function RegisterSecondaryCallback(fn)
+	table.insert(SecondaryCallbacks, fn)
+end
+
+local function RegisterPrimaryCallback(fn)
+	table.insert(PrimaryCallbacks, fn)
+end
+
+local function RegisterTextCallback(fn)
+	table.insert(TextCallbacks, fn)
 end
 
 local function UpdateAllSecondaryElements()
 	for i = #SecondaryElements, 1, -1 do
 		local entry = SecondaryElements[i]
 		if entry.obj and entry.obj.Parent then
-			entry.obj[entry.prop] = SecondaryColor
+			pcall(function()
+				entry.obj[entry.prop] = SecondaryColor
+			end)
 		else
 			table.remove(SecondaryElements, i)
+		end
+	end
+	for i = #SecondaryCallbacks, 1, -1 do
+		local ok = pcall(SecondaryCallbacks[i], SecondaryColor)
+		if not ok then
+			table.remove(SecondaryCallbacks, i)
 		end
 	end
 end
@@ -51,9 +109,17 @@ local function UpdateAllPrimaryElements()
 	for i = #PrimaryElements, 1, -1 do
 		local entry = PrimaryElements[i]
 		if entry.obj and entry.obj.Parent then
-			entry.obj[entry.prop] = PrimaryColor
+			pcall(function()
+				entry.obj[entry.prop] = PrimaryColor
+			end)
 		else
 			table.remove(PrimaryElements, i)
+		end
+	end
+	for i = #PrimaryCallbacks, 1, -1 do
+		local ok = pcall(PrimaryCallbacks[i], PrimaryColor)
+		if not ok then
+			table.remove(PrimaryCallbacks, i)
 		end
 	end
 end
@@ -62,9 +128,17 @@ local function UpdateAllTextElements()
 	for i = #TextElements, 1, -1 do
 		local obj = TextElements[i]
 		if obj and obj.Parent then
-			obj.TextColor3 = TextColor
+			pcall(function()
+				obj.TextColor3 = TextColor
+			end)
 		else
 			table.remove(TextElements, i)
+		end
+	end
+	for i = #TextCallbacks, 1, -1 do
+		local ok = pcall(TextCallbacks[i], TextColor)
+		if not ok then
+			table.remove(TextCallbacks, i)
 		end
 	end
 end
@@ -134,10 +208,14 @@ local function MakeDraggable(topbarobject, object)
 	end)
 end
 
-function lib:Window(text, secondary, closebind, primary)
+function lib:Window(text, secondary, closebind, primary, textCol)
 	CloseBind = closebind or Enum.KeyCode.RightControl
-	SecondaryColor = secondary or Color3.fromRGB(44, 120, 224)
-	PrimaryColor = primary or Color3.fromRGB(30, 30, 30)
+	local sec = ToColor3(secondary)
+	local pri = ToColor3(primary)
+	local txt = ToColor3(textCol)
+	if sec then SecondaryColor = sec end
+	if pri then PrimaryColor = pri end
+	if txt then TextColor = txt end
 	local fs = false
 
 	local Main = Instance.new("Frame")
@@ -158,6 +236,9 @@ function lib:Window(text, secondary, closebind, primary)
 	Main.Visible = true
 
 	RegisterPrimaryElement(Main)
+	UpdateAllPrimaryElements()
+	UpdateAllSecondaryElements()
+	UpdateAllTextElements()
 
 	TabHold.Name = "TabHold"
 	TabHold.Parent = Main
@@ -226,12 +307,16 @@ function lib:Window(text, secondary, closebind, primary)
 	TabFolder.Parent = Main
 
 	function lib:ChangeSecondaryColor(toch)
-		SecondaryColor = toch
+		local c = ToColor3(toch)
+		if not c then return end
+		SecondaryColor = c
 		UpdateAllSecondaryElements()
 	end
 
 	function lib:ChangePrimaryColor(toch)
-		PrimaryColor = toch
+		local c = ToColor3(toch)
+		if not c then return end
+		PrimaryColor = c
 		UpdateAllPrimaryElements()
 	end
 
@@ -240,8 +325,22 @@ function lib:Window(text, secondary, closebind, primary)
 	end
 
 	function lib:ChangeTextColor(toch)
-		TextColor = toch
+		local c = ToColor3(toch)
+		if not c then return end
+		TextColor = c
 		UpdateAllTextElements()
+	end
+
+	function lib:GetPrimaryColor()
+		return PrimaryColor
+	end
+
+	function lib:GetSecondaryColor()
+		return SecondaryColor
+	end
+
+	function lib:GetTextColor()
+		return TextColor
 	end
 
 	function lib:Notification(texttitle, textdesc, textbtn)
@@ -1274,6 +1373,14 @@ function lib:Window(text, secondary, closebind, primary)
 			CreateItems(availableList)
 			Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
 
+			RegisterSecondaryCallback(function(color)
+				for _, child in ipairs(DropItemHolder:GetChildren()) do
+					if child:IsA("TextButton") and IsSelected(child.Text) then
+						child.BackgroundColor3 = color
+					end
+				end
+			end)
+
 			function MultiAPI:UpdateList(newList)
 				CloseDropdown()
 				availableList = newList or {}
@@ -1340,7 +1447,8 @@ function lib:Window(text, secondary, closebind, primary)
 			local RainbowColorPicker = false
 			local ColorInput = nil
 			local HueInput = nil
-			local currentColor = preset or Color3.fromRGB(255, 0, 4)
+			local currentColor = ToColor3(preset) or Color3.fromRGB(255, 0, 4)
+			preset = currentColor
 
 			local Colorpicker = Instance.new("Frame")
 			local ColorpickerCorner = Instance.new("UICorner")
@@ -1768,16 +1876,17 @@ function lib:Window(text, secondary, closebind, primary)
 			end
 
 			function ColorpickerAPI:SetCurrentValue(value, fire)
-				if typeof(value) == "Color3" then
-					currentColor = value
-					BoxColor.BackgroundColor3 = value
-					Color.BackgroundColor3 = value
-					local h, s, v = Color3.toHSV(value)
+				local c = ToColor3(value)
+				if c then
+					currentColor = c
+					BoxColor.BackgroundColor3 = c
+					Color.BackgroundColor3 = c
+					local h, s, v = Color3.toHSV(c)
 					ColorH, ColorS, ColorV = h, s, v
 					HueSelection.Position = UDim2.new(0.48, 0, 1 - h, 0)
 					ColorSelection.Position = UDim2.new(s, 0, 1 - v, 0)
 					if fire ~= false then
-						pcall(callback, value)
+						pcall(callback, c)
 					end
 				end
 			end
