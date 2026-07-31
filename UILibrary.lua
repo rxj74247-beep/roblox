@@ -1071,13 +1071,19 @@ function lib:Window(text, secondary, closebind, primary)
 			return DropdownAPI
 		end
 
-		function tabcontent:MultiDropdown(text, list, callback)
+		function tabcontent:MultiDropdown(text, list, currentListArg, callback)
 			local droptog = false
 			local framesize = 0
 			local itemcount = 0
-			local currentList = list or {}
+			local availableList = list or {}
 			local selected = {}
 			local MultiAPI = {}
+
+			if type(currentListArg) == "table" then
+				for _, v in ipairs(currentListArg) do
+					table.insert(selected, v)
+				end
+			end
 
 			local Dropdown = Instance.new("Frame")
 			local DropdownCorner = Instance.new("UICorner")
@@ -1186,9 +1192,9 @@ function lib:Window(text, secondary, closebind, primary)
 
 				framesize = 0
 				itemcount = 0
-				currentList = itemList or {}
+				availableList = itemList or {}
 
-				for _, v in next, currentList do
+				for _, v in next, availableList do
 					itemcount = itemcount + 1
 					if itemcount <= 3 then
 						framesize = framesize + 26
@@ -1264,14 +1270,37 @@ function lib:Window(text, secondary, closebind, primary)
 				droptog = not droptog
 			end)
 
-			CreateItems(currentList)
+			UpdateTitle()
+			CreateItems(availableList)
 			Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
 
 			function MultiAPI:UpdateList(newList)
 				CloseDropdown()
-				selected = {}
+				availableList = newList or {}
+				local filtered = {}
+				for _, s in ipairs(selected) do
+					for _, a in ipairs(availableList) do
+						if s == a then
+							table.insert(filtered, s)
+							break
+						end
+					end
+				end
+				selected = filtered
 				UpdateTitle()
-				CreateItems(newList)
+				CreateItems(availableList)
+				Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+			end
+
+			function MultiAPI:UpdateCurrentList(newCurrentList)
+				selected = {}
+				if type(newCurrentList) == "table" then
+					for _, v in ipairs(newCurrentList) do
+						table.insert(selected, v)
+					end
+				end
+				UpdateTitle()
+				CreateItems(availableList)
 				Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
 			end
 
@@ -1291,7 +1320,7 @@ function lib:Window(text, secondary, closebind, primary)
 					end
 				end
 				UpdateTitle()
-				CreateItems(currentList)
+				CreateItems(availableList)
 				if fire ~= false then
 					pcall(callback, selected)
 				end
