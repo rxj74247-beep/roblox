@@ -487,6 +487,9 @@ function lib:Window(text, secondary, closebind, primary)
 
 		local tabcontent = {}
 		function tabcontent:Button(text, callback)
+			local ButtonAPI = {}
+			local currentText = text
+
 			local Button = Instance.new("TextButton")
 			local ButtonCorner = Instance.new("UICorner")
 			local ButtonTitle = Instance.new("TextLabel")
@@ -538,10 +541,24 @@ function lib:Window(text, secondary, closebind, primary)
 				pcall(callback)
 			end)
 
+			function ButtonAPI:GetCurrentValue()
+				return currentText
+			end
+
+			function ButtonAPI:SetCurrentValue(value, fire)
+				currentText = tostring(value)
+				ButtonTitle.Text = currentText
+				if fire ~= false then
+					pcall(callback)
+				end
+			end
+
 			Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+			return ButtonAPI
 		end
 
 		function tabcontent:Toggle(text, default, callback)
+			local ToggleAPI = {}
 			local toggled = false
 
 			local Toggle = Instance.new("TextButton")
@@ -622,120 +639,56 @@ function lib:Window(text, secondary, closebind, primary)
 
 			RegisterSecondaryElement(FrameToggle3)
 
-			Toggle.MouseButton1Click:Connect(function()
-				if toggled == false then
-					TweenService:Create(
-						Toggle,
-						TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{BackgroundColor3 = Color3.fromRGB(37, 37, 37)}
-					):Play()
-					TweenService:Create(
-						FrameToggle1,
-						TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{BackgroundTransparency = 1}
-					):Play()
-					TweenService:Create(
-						FrameToggle2,
-						TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{BackgroundTransparency = 1}
-					):Play()
-					TweenService:Create(
-						FrameToggle3,
-						TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{BackgroundTransparency = 0}
-					):Play()
-					TweenService:Create(
-						FrameToggleCircle,
-						TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{BackgroundColor3 = Color3.fromRGB(255, 255, 255)}
-					):Play()
-					FrameToggleCircle:TweenPosition(
-						UDim2.new(0.587, 0, 0.222000003, 0),
-						Enum.EasingDirection.Out,
-						Enum.EasingStyle.Quart,
-						.2,
-						true
-					)
+			local function ApplyToggleVisual(state)
+				if state then
+					TweenService:Create(Toggle, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(37, 37, 37)}):Play()
+					TweenService:Create(FrameToggle1, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+					TweenService:Create(FrameToggle2, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+					TweenService:Create(FrameToggle3, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+					TweenService:Create(FrameToggleCircle, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+					FrameToggleCircle:TweenPosition(UDim2.new(0.587, 0, 0.222000003, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, .2, true)
 				else
-					TweenService:Create(
-						Toggle,
-						TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{BackgroundColor3 = Color3.fromRGB(34, 34, 34)}
-					):Play()
-					TweenService:Create(
-						FrameToggle1,
-						TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{BackgroundTransparency = 0}
-					):Play()
-					TweenService:Create(
-						FrameToggle2,
-						TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{BackgroundTransparency = 0}
-					):Play()
-					TweenService:Create(
-						FrameToggle3,
-						TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{BackgroundTransparency = 1}
-					):Play()
-					TweenService:Create(
-						FrameToggleCircle,
-						TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{BackgroundColor3 = Color3.fromRGB(50, 50, 50)}
-					):Play()
-					FrameToggleCircle:TweenPosition(
-						UDim2.new(0.127000004, 0, 0.222000003, 0),
-						Enum.EasingDirection.Out,
-						Enum.EasingStyle.Quart,
-						.2,
-						true
-					)
+					TweenService:Create(Toggle, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(34, 34, 34)}):Play()
+					TweenService:Create(FrameToggle1, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+					TweenService:Create(FrameToggle2, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+					TweenService:Create(FrameToggle3, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+					TweenService:Create(FrameToggleCircle, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
+					FrameToggleCircle:TweenPosition(UDim2.new(0.127000004, 0, 0.222000003, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, .2, true)
 				end
+			end
+
+			Toggle.MouseButton1Click:Connect(function()
 				toggled = not toggled
+				ApplyToggleVisual(toggled)
 				pcall(callback, toggled)
 			end)
 
 			if default == true then
-				TweenService:Create(
-					Toggle,
-					TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-					{BackgroundColor3 = Color3.fromRGB(37, 37, 37)}
-				):Play()
-				TweenService:Create(
-					FrameToggle1,
-					TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-					{BackgroundTransparency = 1}
-				):Play()
-				TweenService:Create(
-					FrameToggle2,
-					TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-					{BackgroundTransparency = 1}
-				):Play()
-				TweenService:Create(
-					FrameToggle3,
-					TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-					{BackgroundTransparency = 0}
-				):Play()
-				TweenService:Create(
-					FrameToggleCircle,
-					TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-					{BackgroundColor3 = Color3.fromRGB(255, 255, 255)}
-				):Play()
-				FrameToggleCircle:TweenPosition(
-					UDim2.new(0.587, 0, 0.222000003, 0),
-					Enum.EasingDirection.Out,
-					Enum.EasingStyle.Quart,
-					.2,
-					true
-				)
-				toggled = not toggled
+				toggled = true
+				ApplyToggleVisual(true)
+			end
+
+			function ToggleAPI:GetCurrentValue()
+				return toggled
+			end
+
+			function ToggleAPI:SetCurrentValue(value, fire)
+				toggled = value and true or false
+				ApplyToggleVisual(toggled)
+				if fire ~= false then
+					pcall(callback, toggled)
+				end
 			end
 
 			Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+			return ToggleAPI
 		end
 
 		function tabcontent:Slider(text, min, max, start, callback)
+			local SliderAPI = {}
 			local dragging = false
 			local dragConnection = nil
+			local currentValue = start and math.floor((start / max) * (max - min) + min) or min
 
 			local Slider = Instance.new("TextButton")
 			local SliderCorner = Instance.new("UICorner")
@@ -780,7 +733,7 @@ function lib:Window(text, secondary, closebind, primary)
 			SliderValue.Position = UDim2.new(0.0358126722, 0, 0, 0)
 			SliderValue.Size = UDim2.new(0, 335, 0, 42)
 			SliderValue.Font = Enum.Font.Gotham
-			SliderValue.Text = tostring(start and math.floor((start / max) * (max - min) + min) or 0)
+			SliderValue.Text = tostring(currentValue)
 			SliderValue.TextColor3 = TextColor
 			SliderValue.TextSize = 14.000
 			SliderValue.TextXAlignment = Enum.TextXAlignment.Right
@@ -793,17 +746,18 @@ function lib:Window(text, secondary, closebind, primary)
 			SlideFrame.Position = UDim2.new(0.0342647657, 0, 0.686091602, 0)
 			SlideFrame.Size = UDim2.new(0, 335, 0, 3)
 
+			local initialScale = (max ~= min) and ((currentValue - min) / (max - min)) or 0
 			CurrentValueFrame.Name = "CurrentValueFrame"
 			CurrentValueFrame.Parent = SlideFrame
 			CurrentValueFrame.BackgroundColor3 = SecondaryColor
 			CurrentValueFrame.BorderSizePixel = 0
-			CurrentValueFrame.Size = UDim2.new((start or 0) / max, 0, 0, 3)
+			CurrentValueFrame.Size = UDim2.new(initialScale, 0, 0, 3)
 
 			SlideCircle.Name = "SlideCircle"
 			SlideCircle.Parent = SlideFrame
 			SlideCircle.BackgroundColor3 = SecondaryColor
 			SlideCircle.BackgroundTransparency = 1.000
-			SlideCircle.Position = UDim2.new((start or 0) / max, -6, -1.30499995, 0)
+			SlideCircle.Position = UDim2.new(initialScale, -6, -1.30499995, 0)
 			SlideCircle.Size = UDim2.new(0, 11, 0, 11)
 			SlideCircle.Image = "rbxassetid://3570695787"
 			SlideCircle.ImageColor3 = SecondaryColor
@@ -811,23 +765,19 @@ function lib:Window(text, secondary, closebind, primary)
 			RegisterSecondaryElement(CurrentValueFrame)
 			RegisterSecondaryElement(SlideCircle, "ImageColor3")
 
-			local function move(input)
-				local pos = UDim2.new(
-					math.clamp((input.Position.X - SlideFrame.AbsolutePosition.X) / SlideFrame.AbsoluteSize.X, 0, 1),
-					-6,
-					-1.30499995,
-					0
-				)
-				local pos1 = UDim2.new(
-					math.clamp((input.Position.X - SlideFrame.AbsolutePosition.X) / SlideFrame.AbsoluteSize.X, 0, 1),
-					0,
-					0,
-					3
-				)
-				CurrentValueFrame:TweenSize(pos1, "Out", "Sine", 0.1, true)
-				SlideCircle:TweenPosition(pos, "Out", "Sine", 0.1, true)
-				local value = math.floor(((pos.X.Scale * max) / max) * (max - min) + min)
+			local function SetSliderVisual(value)
+				value = math.clamp(math.floor(value), min, max)
+				currentValue = value
+				local scale = (max ~= min) and ((value - min) / (max - min)) or 0
+				CurrentValueFrame:TweenSize(UDim2.new(scale, 0, 0, 3), "Out", "Sine", 0.1, true)
+				SlideCircle:TweenPosition(UDim2.new(scale, -6, -1.30499995, 0), "Out", "Sine", 0.1, true)
 				SliderValue.Text = tostring(value)
+			end
+
+			local function move(input)
+				local scale = math.clamp((input.Position.X - SlideFrame.AbsolutePosition.X) / SlideFrame.AbsoluteSize.X, 0, 1)
+				local value = math.floor(scale * (max - min) + min)
+				SetSliderVisual(value)
 				pcall(callback, value)
 			end
 
@@ -855,7 +805,19 @@ function lib:Window(text, secondary, closebind, primary)
 				end
 			end)
 
+			function SliderAPI:GetCurrentValue()
+				return currentValue
+			end
+
+			function SliderAPI:SetCurrentValue(value, fire)
+				SetSliderVisual(value)
+				if fire ~= false then
+					pcall(callback, currentValue)
+				end
+			end
+
 			Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+			return SliderAPI
 		end
 
 		function tabcontent:Dropdown(text, list, callback)
@@ -863,6 +825,7 @@ function lib:Window(text, secondary, closebind, primary)
 			local framesize = 0
 			local itemcount = 0
 			local currentList = list or {}
+			local selectedValue = nil
 			local DropdownAPI = {}
 
 			local Dropdown = Instance.new("Frame")
@@ -1005,6 +968,7 @@ function lib:Window(text, secondary, closebind, primary)
 
 					Item.MouseButton1Click:Connect(function()
 						droptog = false
+						selectedValue = v
 						DropdownTitle.Text = text .. " - " .. v
 						pcall(callback, v)
 						Dropdown:TweenSize(
@@ -1080,6 +1044,7 @@ function lib:Window(text, secondary, closebind, primary)
 			end
 
 			function DropdownAPI:UpdateSelected(value)
+				selectedValue = value
 				if value == nil or value == "" then
 					DropdownTitle.Text = text
 				else
@@ -1087,10 +1052,256 @@ function lib:Window(text, secondary, closebind, primary)
 				end
 			end
 
+			function DropdownAPI:GetCurrentValue()
+				return selectedValue
+			end
+
+			function DropdownAPI:SetCurrentValue(value, fire)
+				selectedValue = value
+				if value == nil or value == "" then
+					DropdownTitle.Text = text
+				else
+					DropdownTitle.Text = text .. " - " .. tostring(value)
+				end
+				if fire ~= false and value ~= nil and value ~= "" then
+					pcall(callback, value)
+				end
+			end
+
 			return DropdownAPI
 		end
 
+		function tabcontent:MultiDropdown(text, list, callback)
+			local droptog = false
+			local framesize = 0
+			local itemcount = 0
+			local currentList = list or {}
+			local selected = {}
+			local MultiAPI = {}
+
+			local Dropdown = Instance.new("Frame")
+			local DropdownCorner = Instance.new("UICorner")
+			local DropdownBtn = Instance.new("TextButton")
+			local DropdownTitle = Instance.new("TextLabel")
+			local ArrowImg = Instance.new("ImageLabel")
+			local DropItemHolder = Instance.new("ScrollingFrame")
+			local DropLayout = Instance.new("UIListLayout")
+
+			Dropdown.Name = "MultiDropdown"
+			Dropdown.Parent = Tab
+			Dropdown.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+			Dropdown.ClipsDescendants = true
+			Dropdown.Position = UDim2.new(-0.541071415, 0, -0.532915354, 0)
+			Dropdown.Size = UDim2.new(0, 363, 0, 42)
+
+			DropdownCorner.CornerRadius = UDim.new(0, 5)
+			DropdownCorner.Name = "DropdownCorner"
+			DropdownCorner.Parent = Dropdown
+
+			DropdownBtn.Name = "DropdownBtn"
+			DropdownBtn.Parent = Dropdown
+			DropdownBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			DropdownBtn.BackgroundTransparency = 1.000
+			DropdownBtn.Size = UDim2.new(0, 363, 0, 42)
+			DropdownBtn.Font = Enum.Font.SourceSans
+			DropdownBtn.Text = ""
+			DropdownBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+			DropdownBtn.TextSize = 14.000
+
+			DropdownTitle.Name = "DropdownTitle"
+			DropdownTitle.Parent = Dropdown
+			DropdownTitle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			DropdownTitle.BackgroundTransparency = 1.000
+			DropdownTitle.Position = UDim2.new(0.0358126722, 0, 0, 0)
+			DropdownTitle.Size = UDim2.new(0, 187, 0, 42)
+			DropdownTitle.Font = Enum.Font.Gotham
+			DropdownTitle.Text = text
+			DropdownTitle.TextColor3 = TextColor
+			DropdownTitle.TextSize = 14.000
+			DropdownTitle.TextXAlignment = Enum.TextXAlignment.Left
+			RegisterTextElement(DropdownTitle)
+
+			ArrowImg.Name = "ArrowImg"
+			ArrowImg.Parent = DropdownTitle
+			ArrowImg.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			ArrowImg.BackgroundTransparency = 1.000
+			ArrowImg.Position = UDim2.new(1.65240645, 0, 0.190476194, 0)
+			ArrowImg.Size = UDim2.new(0, 26, 0, 26)
+			ArrowImg.Image = "http://www.roblox.com/asset/?id=6034818375"
+
+			DropItemHolder.Name = "DropItemHolder"
+			DropItemHolder.Parent = DropdownTitle
+			DropItemHolder.Active = true
+			DropItemHolder.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			DropItemHolder.BackgroundTransparency = 1.000
+			DropItemHolder.BorderSizePixel = 0
+			DropItemHolder.Position = UDim2.new(-0.00400000019, 0, 1.04999995, 0)
+			DropItemHolder.Size = UDim2.new(0, 342, 0, 0)
+			DropItemHolder.CanvasSize = UDim2.new(0, 0, 0, 0)
+			DropItemHolder.ScrollBarThickness = 3
+
+			DropLayout.Name = "DropLayout"
+			DropLayout.Parent = DropItemHolder
+			DropLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+			local function IsSelected(v)
+				for _, s in ipairs(selected) do
+					if s == v then return true end
+				end
+				return false
+			end
+
+			local function RemoveSelected(v)
+				for i = #selected, 1, -1 do
+					if selected[i] == v then
+						table.remove(selected, i)
+					end
+				end
+			end
+
+			local function UpdateTitle()
+				if #selected == 0 then
+					DropdownTitle.Text = text
+				else
+					DropdownTitle.Text = text .. " (" .. #selected .. ") - " .. table.concat(selected, ", ")
+				end
+			end
+
+			local function CloseDropdown()
+				if droptog then
+					droptog = false
+					Dropdown:TweenSize(UDim2.new(0, 363, 0, 42), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, .2, true)
+					TweenService:Create(ArrowImg, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = 0}):Play()
+					task.wait(.2)
+					Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+				end
+			end
+
+			local function CreateItems(itemList)
+				for _, child in ipairs(DropItemHolder:GetChildren()) do
+					if child:IsA("TextButton") then
+						child:Destroy()
+					end
+				end
+
+				framesize = 0
+				itemcount = 0
+				currentList = itemList or {}
+
+				for _, v in next, currentList do
+					itemcount = itemcount + 1
+					if itemcount <= 3 then
+						framesize = framesize + 26
+						DropItemHolder.Size = UDim2.new(0, 342, 0, framesize)
+					end
+
+					local Item = Instance.new("TextButton")
+					local ItemCorner = Instance.new("UICorner")
+
+					Item.Name = "Item"
+					Item.Parent = DropItemHolder
+					Item.BackgroundColor3 = IsSelected(v) and SecondaryColor or Color3.fromRGB(34, 34, 34)
+					Item.ClipsDescendants = true
+					Item.Size = UDim2.new(0, 335, 0, 25)
+					Item.AutoButtonColor = false
+					Item.Font = Enum.Font.Gotham
+					Item.Text = v
+					Item.TextColor3 = TextColor
+					Item.TextSize = 15.000
+					RegisterTextElement(Item)
+
+					ItemCorner.CornerRadius = UDim.new(0, 4)
+					ItemCorner.Name = "ItemCorner"
+					ItemCorner.Parent = Item
+
+					Item.MouseEnter:Connect(function()
+						if not IsSelected(v) then
+							TweenService:Create(Item, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(37, 37, 37)}):Play()
+						end
+					end)
+
+					Item.MouseLeave:Connect(function()
+						if not IsSelected(v) then
+							TweenService:Create(Item, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(34, 34, 34)}):Play()
+						end
+					end)
+
+					Item.MouseButton1Click:Connect(function()
+						if IsSelected(v) then
+							RemoveSelected(v)
+							Item.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+						else
+							table.insert(selected, v)
+							Item.BackgroundColor3 = SecondaryColor
+						end
+						UpdateTitle()
+						pcall(callback, selected)
+					end)
+
+					DropItemHolder.CanvasSize = UDim2.new(0, 0, 0, DropLayout.AbsoluteContentSize.Y)
+				end
+
+				if itemcount == 0 then
+					DropItemHolder.Size = UDim2.new(0, 342, 0, 0)
+				elseif itemcount > 3 then
+					DropItemHolder.Size = UDim2.new(0, 342, 0, 78)
+				end
+				DropItemHolder.CanvasSize = UDim2.new(0, 0, 0, DropLayout.AbsoluteContentSize.Y)
+			end
+
+			DropdownBtn.MouseButton1Click:Connect(function()
+				if droptog == false then
+					Dropdown:TweenSize(UDim2.new(0, 363, 0, 55 + framesize), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, .2, true)
+					TweenService:Create(ArrowImg, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = 270}):Play()
+					task.wait(.2)
+					Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+				else
+					Dropdown:TweenSize(UDim2.new(0, 363, 0, 42), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, .2, true)
+					TweenService:Create(ArrowImg, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = 0}):Play()
+					task.wait(.2)
+					Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+				end
+				droptog = not droptog
+			end)
+
+			CreateItems(currentList)
+			Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+
+			function MultiAPI:UpdateList(newList)
+				CloseDropdown()
+				selected = {}
+				UpdateTitle()
+				CreateItems(newList)
+				Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+			end
+
+			function MultiAPI:GetCurrentValue()
+				local copy = {}
+				for _, v in ipairs(selected) do
+					table.insert(copy, v)
+				end
+				return copy
+			end
+
+			function MultiAPI:SetCurrentValue(values, fire)
+				selected = {}
+				if type(values) == "table" then
+					for _, v in ipairs(values) do
+						table.insert(selected, v)
+					end
+				end
+				UpdateTitle()
+				CreateItems(currentList)
+				if fire ~= false then
+					pcall(callback, selected)
+				end
+			end
+
+			return MultiAPI
+		end
+
 		function tabcontent:Colorpicker(text, preset, callback)
+			local ColorpickerAPI = {}
 			local ColorPickerToggled = false
 			local OldToggleColor = Color3.fromRGB(0, 0, 0)
 			local OldColor = Color3.fromRGB(0, 0, 0)
@@ -1100,6 +1311,7 @@ function lib:Window(text, secondary, closebind, primary)
 			local RainbowColorPicker = false
 			local ColorInput = nil
 			local HueInput = nil
+			local currentColor = preset or Color3.fromRGB(255, 0, 4)
 
 			local Colorpicker = Instance.new("Frame")
 			local ColorpickerCorner = Instance.new("UICorner")
@@ -1353,6 +1565,7 @@ function lib:Window(text, secondary, closebind, primary)
 			local function UpdateColorPicker()
 				BoxColor.BackgroundColor3 = Color3.fromHSV(ColorH, ColorS, ColorV)
 				Color.BackgroundColor3 = Color3.fromHSV(ColorH, 1, 1)
+				currentColor = BoxColor.BackgroundColor3
 				pcall(callback, BoxColor.BackgroundColor3)
 			end
 
@@ -1362,6 +1575,7 @@ function lib:Window(text, secondary, closebind, primary)
 
 			BoxColor.BackgroundColor3 = preset
 			Color.BackgroundColor3 = preset
+			currentColor = preset
 			pcall(callback, BoxColor.BackgroundColor3)
 
 			Color.InputBegan:Connect(function(input)
@@ -1463,6 +1677,7 @@ function lib:Window(text, secondary, closebind, primary)
 					while RainbowColorPicker do
 						BoxColor.BackgroundColor3 = Color3.fromHSV(lib.RainbowColorValue, 1, 1)
 						Color.BackgroundColor3 = Color3.fromHSV(lib.RainbowColorValue, 1, 1)
+						currentColor = BoxColor.BackgroundColor3
 						ColorSelection.Position = UDim2.new(1, 0, 0, 0)
 						HueSelection.Position = UDim2.new(0.48, 0, 0, lib.HueSelectionPosition)
 						pcall(callback, BoxColor.BackgroundColor3)
@@ -1518,7 +1733,28 @@ function lib:Window(text, secondary, closebind, primary)
 				task.wait(.2)
 				Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
 			end)
+
+			function ColorpickerAPI:GetCurrentValue()
+				return currentColor
+			end
+
+			function ColorpickerAPI:SetCurrentValue(value, fire)
+				if typeof(value) == "Color3" then
+					currentColor = value
+					BoxColor.BackgroundColor3 = value
+					Color.BackgroundColor3 = value
+					local h, s, v = Color3.toHSV(value)
+					ColorH, ColorS, ColorV = h, s, v
+					HueSelection.Position = UDim2.new(0.48, 0, 1 - h, 0)
+					ColorSelection.Position = UDim2.new(s, 0, 1 - v, 0)
+					if fire ~= false then
+						pcall(callback, value)
+					end
+				end
+			end
+
 			Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+			return ColorpickerAPI
 		end
 
 		function tabcontent:Label(text)
@@ -1560,11 +1796,21 @@ function lib:Window(text, secondary, closebind, primary)
 				LabelTitle.Text = newText
 			end
 
+			function FunctionsTableLabel:GetCurrentValue()
+				return text
+			end
+
+			function FunctionsTableLabel:SetCurrentValue(value)
+				text = tostring(value)
+				LabelTitle.Text = text
+			end
+
 			Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
 			return FunctionsTableLabel
 		end
 
 		function tabcontent:Textbox(text, disapper, callback)
+			local TextboxAPI = {}
 			local Textbox = Instance.new("Frame")
 			local TextboxCorner = Instance.new("UICorner")
 			local TextboxTitle = Instance.new("TextLabel")
@@ -1626,10 +1872,24 @@ function lib:Window(text, secondary, closebind, primary)
 					end
 				end
 			end)
+
+			function TextboxAPI:GetCurrentValue()
+				return TextBox.Text
+			end
+
+			function TextboxAPI:SetCurrentValue(value, fire)
+				TextBox.Text = tostring(value or "")
+				if fire ~= false and #TextBox.Text > 0 then
+					pcall(callback, TextBox.Text)
+				end
+			end
+
 			Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+			return TextboxAPI
 		end
 
 		function tabcontent:Bind(text, keypreset, callback)
+			local BindAPI = {}
 			local binding = false
 			local Key = keypreset.Name
 			local Bind = Instance.new("TextButton")
@@ -1699,6 +1959,20 @@ function lib:Window(text, secondary, closebind, primary)
 					end
 				end
 			end)
+
+			function BindAPI:GetCurrentValue()
+				return Key
+			end
+
+			function BindAPI:SetCurrentValue(value, fire)
+				Key = tostring(value)
+				BindText.Text = Key
+				if fire ~= false then
+					pcall(callback)
+				end
+			end
+
+			return BindAPI
 		end
 		return tabcontent
 	end
