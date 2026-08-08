@@ -11,15 +11,17 @@ local SecondaryColor = Color3.fromRGB(185, 18, 34)
 local TextColor = Color3.fromRGB(218, 220, 224)
 local CloseBind = Enum.KeyCode.RightControl
 local ThemeBindings = {Primary = {}, Secondary = {}, Text = {}, Callbacks = {Primary = {}, Secondary = {}, Text = {}}}
-local Existing = CoreGui:FindFirstChild("ui")
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Existing = PlayerGui:FindFirstChild("ui") or CoreGui:FindFirstChild("ui")
 if Existing then
-	Existing:Destroy()
+	pcall(function() Existing:Destroy() end)
 end
 local ui = Instance.new("ScreenGui")
 ui.Name = "ui"
 ui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ui.ResetOnSpawn = false
-ui.Parent = CoreGui
+ui.IgnoreGuiInset = false
+ui.Parent = PlayerGui
 local function ToColor3(c)
 	if typeof(c) == "Color3" then
 		return c
@@ -1558,14 +1560,14 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			local api = {}
 			function api:Set(newText)
 				currentText = tostring(newText)
-				label.Text = currentText
+				pcall(function() label.Text = currentText end)
 			end
 			function api:GetCurrentValue()
 				return currentText
 			end
 			function api:SetCurrentValue(value)
 				currentText = tostring(value)
-				label.Text = currentText
+				pcall(function() label.Text = currentText end)
 			end
 			return api
 		end
