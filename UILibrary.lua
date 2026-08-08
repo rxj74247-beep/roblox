@@ -6,9 +6,9 @@ local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
-local PrimaryColor = Color3.fromRGB(8, 8, 8)
-local SecondaryColor = Color3.fromRGB(155, 8, 20)
-local TextColor = Color3.fromRGB(205, 205, 205)
+local PrimaryColor = Color3.fromRGB(12, 13, 16)
+local SecondaryColor = Color3.fromRGB(185, 18, 34)
+local TextColor = Color3.fromRGB(218, 220, 224)
 local CloseBind = Enum.KeyCode.RightControl
 local ThemeBindings = {Primary = {}, Secondary = {}, Text = {}, Callbacks = {Primary = {}, Secondary = {}, Text = {}}}
 local Existing = CoreGui:FindFirstChild("ui")
@@ -50,10 +50,16 @@ local function MutedText()
 	return Color3.fromRGB(math.clamp(TextColor.R * 255 - 85, 70, 190), math.clamp(TextColor.G * 255 - 85, 70, 190), math.clamp(TextColor.B * 255 - 85, 70, 190))
 end
 local function HoverPrimary()
-	return Color3.fromRGB(math.clamp(PrimaryColor.R * 255 + 8, 0, 255), math.clamp(PrimaryColor.G * 255 + 8, 0, 255), math.clamp(PrimaryColor.B * 255 + 8, 0, 255))
+	return Color3.fromRGB(math.clamp(PrimaryColor.R * 255 + 15, 0, 255), math.clamp(PrimaryColor.G * 255 + 15, 0, 255), math.clamp(PrimaryColor.B * 255 + 15, 0, 255))
 end
 local function PanelPrimary()
-	return Color3.fromRGB(math.clamp(PrimaryColor.R * 255 + 4, 0, 255), math.clamp(PrimaryColor.G * 255 + 4, 0, 255), math.clamp(PrimaryColor.B * 255 + 4, 0, 255))
+	return Color3.fromRGB(math.clamp(PrimaryColor.R * 255 + 7, 0, 255), math.clamp(PrimaryColor.G * 255 + 7, 0, 255), math.clamp(PrimaryColor.B * 255 + 7, 0, 255))
+end
+local function PanelSecondary()
+	return Color3.fromRGB(math.clamp(PrimaryColor.R * 255 + 11, 0, 255), math.clamp(PrimaryColor.G * 255 + 11, 0, 255), math.clamp(PrimaryColor.B * 255 + 11, 0, 255))
+end
+local function BorderColor()
+	return Color3.fromRGB(math.clamp(PrimaryColor.R * 255 + 30, 28, 72), math.clamp(PrimaryColor.G * 255 + 30, 28, 72), math.clamp(PrimaryColor.B * 255 + 30, 28, 72))
 end
 local function BindTheme(obj, prop, kind)
 	if not obj then
@@ -110,12 +116,22 @@ local function ApplyStroke(obj, color)
 	local stroke = Instance.new("UIStroke")
 	stroke.Thickness = 1
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Color = color or SecondaryColor
+	stroke.Color = color or BorderColor()
 	stroke.Parent = obj
 	if not color then
-		BindTheme(stroke, "Color", "Secondary")
+		BindThemeCallback("Primary", function()
+			if stroke and stroke.Parent then
+				stroke.Color = BorderColor()
+			end
+		end)
 	end
 	return stroke
+end
+local function ApplyCorner(obj, radius)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, radius or 4)
+	corner.Parent = obj
+	return corner
 end
 local function ApplyPadding(obj, left, right, top, bottom)
 	local padding = Instance.new("UIPadding")
@@ -183,6 +199,7 @@ local function CreateBaseItem(parent, height)
 		Size = UDim2.new(1, 0, 0, height or 34),
 		ClipsDescendants = true
 	})
+	ApplyCorner(holder, 4)
 	BindThemeCallback("Primary", function()
 		if holder and holder.Parent then
 			holder.BackgroundColor3 = PanelPrimary()
@@ -216,38 +233,51 @@ end
 local function CreatePanel(parent, size, pos, title)
 	local frame = Make("Frame", {
 		Parent = parent,
-		BackgroundColor3 = PrimaryColor,
+		BackgroundColor3 = PanelPrimary(),
 		BorderSizePixel = 0,
 		Position = pos,
 		Size = size,
 		ClipsDescendants = true
 	})
-	BindTheme(frame, "BackgroundColor3", "Primary")
+	ApplyCorner(frame, 5)
+	BindThemeCallback("Primary", function()
+		if frame and frame.Parent then
+			frame.BackgroundColor3 = PanelPrimary()
+		end
+	end)
 	ApplyStroke(frame)
 	local titleLabel = Make("TextLabel", {
 		Parent = frame,
 		BackgroundTransparency = 1,
-		Position = UDim2.new(0, 10, 0, 6),
-		Size = UDim2.new(1, -20, 0, 16),
+		Position = UDim2.new(0, 12, 0, 8),
+		Size = UDim2.new(1, -24, 0, 17),
 		Font = Enum.Font.Code,
 		Text = title,
 		TextSize = 13,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = MutedText()
+		TextColor3 = TextColor
 	})
-	BindThemeCallback("Text", function()
-		if titleLabel and titleLabel.Parent then
-			titleLabel.TextColor3 = MutedText()
-		end
-	end)
-	local line = Make("Frame", {
+	BindTheme(titleLabel, "TextColor3", "Text")
+	local accent = Make("Frame", {
 		Parent = frame,
 		BorderSizePixel = 0,
 		BackgroundColor3 = SecondaryColor,
-		Position = UDim2.new(0, 0, 0, 28),
-		Size = UDim2.new(1, 0, 0, 1)
+		Position = UDim2.new(0, 12, 0, 29),
+		Size = UDim2.new(0, 30, 0, 2)
 	})
-	BindTheme(line, "BackgroundColor3", "Secondary")
+	BindTheme(accent, "BackgroundColor3", "Secondary")
+	local line = Make("Frame", {
+		Parent = frame,
+		BorderSizePixel = 0,
+		BackgroundColor3 = BorderColor(),
+		Position = UDim2.new(0, 48, 0, 29),
+		Size = UDim2.new(1, -60, 0, 1)
+	})
+	BindThemeCallback("Primary", function()
+		if line and line.Parent then
+			line.BackgroundColor3 = BorderColor()
+		end
+	end)
 	return frame
 end
 local function CreateScrollingPanel(parent, size, pos, title)
@@ -255,8 +285,8 @@ local function CreateScrollingPanel(parent, size, pos, title)
 	local scroll = Make("ScrollingFrame", {
 		Parent = panel,
 		BackgroundTransparency = 1,
-		Position = UDim2.new(0, 8, 0, 36),
-		Size = UDim2.new(1, -16, 1, -44),
+		Position = UDim2.new(0, 10, 0, 39),
+		Size = UDim2.new(1, -20, 1, -49),
 		CanvasSize = UDim2.new(),
 		BorderSizePixel = 0,
 		ScrollBarThickness = 2,
@@ -268,8 +298,8 @@ local function CreateScrollingPanel(parent, size, pos, title)
 		ScrollBarImageColor3 = SecondaryColor
 	})
 	BindTheme(scroll, "ScrollBarImageColor3", "Secondary")
-	local layout = CreateList(scroll, 6)
-	SyncCanvas(scroll, layout, 4)
+	local layout = CreateList(scroll, 7)
+	SyncCanvas(scroll, layout, 6)
 	return panel, scroll, layout
 end
 local function SetVisibleRecursive(holder, state)
@@ -317,13 +347,13 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 	local topBar = Make("Frame", {
 		Parent = main,
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 30)
+		Size = UDim2.new(1, 0, 0, 36)
 	})
 	local appName = Make("TextLabel", {
 		Parent = topBar,
 		BackgroundTransparency = 1,
 		Position = UDim2.new(0, 8, 0, 5),
-		Size = UDim2.new(0, 148, 0, 20),
+		Size = UDim2.new(0, 184, 0, 20),
 		Font = Enum.Font.Code,
 		Text = tostring(text or "Library"),
 		TextSize = 13,
@@ -335,8 +365,8 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 	local tabStrip = Make("Frame", {
 		Parent = topBar,
 		BackgroundTransparency = 1,
-		Position = UDim2.new(0, 158, 0, 0),
-		Size = UDim2.new(1, -166, 1, 0)
+		Position = UDim2.new(0, 194, 0, 0),
+		Size = UDim2.new(1, -204, 1, 0)
 	})
 	local tabLayout = Instance.new("UIListLayout")
 	tabLayout.FillDirection = Enum.FillDirection.Horizontal
@@ -347,15 +377,15 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		Parent = main,
 		BackgroundColor3 = SecondaryColor,
 		BorderSizePixel = 0,
-		Position = UDim2.new(0, 0, 0, 29),
+		Position = UDim2.new(0, 0, 0, 35),
 		Size = UDim2.new(1, 0, 0, 1)
 	})
 	BindTheme(topLine, "BackgroundColor3", "Secondary")
 	local contentRoot = Make("Frame", {
 		Parent = main,
 		BackgroundTransparency = 1,
-		Position = UDim2.new(0, 8, 0, 36),
-		Size = UDim2.new(1, -16, 1, -60)
+		Position = UDim2.new(0, 10, 0, 46),
+		Size = UDim2.new(1, -20, 1, -76)
 	})
 	local footer = Make("Frame", {
 		Parent = main,
@@ -402,7 +432,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		TextColor3 = SecondaryColor
 	})
 	BindTheme(footerAccent, "TextColor3", "Secondary")
-	main:TweenSize(UDim2.new(0, 580, 0, 440), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.35, true)
+	main:TweenSize(UDim2.new(0, 720, 0, 500), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.35, true)
 	MakeDraggable(topBar, main)
 	local hidden = false
 	UserInputService.InputBegan:Connect(function(io, p)
@@ -412,7 +442,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		if io.KeyCode == CloseBind then
 			hidden = not hidden
 			if hidden then
-				main:TweenSize(UDim2.new(0, 580, 0, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.25, true)
+				main:TweenSize(UDim2.new(0, 720, 0, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.25, true)
 				task.delay(0.25, function()
 					if hidden and main and main.Parent then
 						ui.Enabled = false
@@ -420,7 +450,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				end)
 			else
 				ui.Enabled = true
-				main:TweenSize(UDim2.new(0, 580, 0, 440), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.25, true)
+				main:TweenSize(UDim2.new(0, 720, 0, 500), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.25, true)
 			end
 		end
 	end)
@@ -547,15 +577,26 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 	end
 	local tabhold = {}
 	function tabhold:Tab(name)
+		local tabWidth = math.max(58, (#tostring(name) * 8) + 22)
 		local button = Make("TextButton", {
 			Parent = tabStrip,
 			BackgroundTransparency = 1,
-			Size = UDim2.new(0, 54, 1, 0),
+			Size = UDim2.new(0, tabWidth, 1, 0),
 			AutoButtonColor = false,
 			Text = "",
 			Font = Enum.Font.Code,
 			TextSize = 13
 		})
+		local selection = Make("Frame", {
+			Parent = button,
+			BackgroundColor3 = SecondaryColor,
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			Position = UDim2.new(0, 4, 0, 5),
+			Size = UDim2.new(1, -8, 1, -10)
+		})
+		ApplyCorner(selection, 4)
+		BindTheme(selection, "BackgroundColor3", "Secondary")
 		local buttonLabel = Make("TextLabel", {
 			Parent = button,
 			BackgroundTransparency = 1,
@@ -580,23 +621,39 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			Size = UDim2.new(1, 0, 1, 0),
 			Visible = false
 		})
-		local _, sideScroll = CreateScrollingPanel(page, UDim2.new(0, 112, 1, 0), UDim2.new(0, 0, 0, 0), name)
-		local _, mainScroll = CreateScrollingPanel(page, UDim2.new(0.5, -65, 1, 0), UDim2.new(0, 124, 0, 0), "Navigation")
-		local _, rightScroll = CreateScrollingPanel(page, UDim2.new(0.5, -65, 1, 0), UDim2.new(0.5, 10, 0, 0), "Performance")
-		local sideCount = 0
-		local mainCount = 0
-		local rightCount = 0
+		local _, leftScroll = CreateScrollingPanel(page, UDim2.new(0.5, -5, 1, 0), UDim2.new(0, 0, 0, 0), name)
+		local _, rightScroll = CreateScrollingPanel(page, UDim2.new(0.5, -5, 1, 0), UDim2.new(0.5, 5, 0, 0), "Options")
+		local leftWeight = 0
+		local rightWeight = 0
+		local sectionParent = nil
+		local function weightFor(kind)
+			if kind == "Slider" then
+				return 56
+			elseif kind == "Label" then
+				return 30
+			end
+			return 39
+		end
+		local function addWeight(parent, amount)
+			if parent == leftScroll then
+				leftWeight += amount
+			else
+				rightWeight += amount
+			end
+		end
 		local function chooseContentParent(kind)
 			if kind == "Label" then
-				sideCount += 1
-				return sideScroll
-			elseif kind == "Button" or kind == "Dropdown" or kind == "MultiDropdown" or kind == "Textbox" then
-				mainCount += 1
-				return mainScroll
-			else
-				rightCount += 1
-				return rightScroll
+				sectionParent = leftWeight <= rightWeight and leftScroll or rightScroll
+				addWeight(sectionParent, weightFor(kind))
+				return sectionParent
 			end
+			if sectionParent then
+				addWeight(sectionParent, weightFor(kind))
+				return sectionParent
+			end
+			local parent = leftWeight <= rightWeight and leftScroll or rightScroll
+			addWeight(parent, weightFor(kind))
+			return parent
 		end
 		local function selectThisTab()
 			if selectedPage then
@@ -604,17 +661,30 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			end
 			if selectedTabButton and selectedTabButton:FindFirstChild("Label") then
 				Tween(selectedTabButton.Label, 0.12, {TextColor3 = MutedText()})
+				Tween(selectedTabButton.Selection, 0.12, {BackgroundTransparency = 1})
 				selectedTabButton.Indicator:TweenSize(UDim2.new(0, 0, 0, 2), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
 			end
 			selectedPage = page
 			selectedTabButton = button
 			page.Visible = true
-			Tween(buttonLabel, 0.12, {TextColor3 = SecondaryColor})
-			indicator:TweenSize(UDim2.new(1, 0, 0, 2), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
+			Tween(buttonLabel, 0.12, {TextColor3 = TextColor})
+			Tween(selection, 0.12, {BackgroundTransparency = 0.88})
+			indicator:TweenSize(UDim2.new(0.7, 0, 0, 2), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
 		end
 		button.Name = "TabButton"
 		buttonLabel.Name = "Label"
+		selection.Name = "Selection"
 		indicator.Name = "Indicator"
+		button.MouseEnter:Connect(function()
+			if selectedTabButton ~= button then
+				Tween(selection, 0.12, {BackgroundTransparency = 0.95})
+			end
+		end)
+		button.MouseLeave:Connect(function()
+			if selectedTabButton ~= button then
+				Tween(selection, 0.12, {BackgroundTransparency = 1})
+			end
+		end)
 		button.MouseButton1Click:Connect(selectThisTab)
 		if not selectedPage then
 			selectThisTab()
@@ -1326,12 +1396,24 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		function tabcontent:Label(text)
 			local currentText = tostring(text)
 			local parent = chooseContentParent("Label")
-			local item = CreateBaseItem(parent, 28)
+			local item = Make("Frame", {
+				Parent = parent,
+				BackgroundTransparency = 1,
+				Size = UDim2.new(1, 0, 0, 24)
+			})
+			local accent = Make("Frame", {
+				Parent = item,
+				BackgroundColor3 = SecondaryColor,
+				BorderSizePixel = 0,
+				Position = UDim2.new(0, 0, 0.5, -6),
+				Size = UDim2.new(0, 2, 0, 12)
+			})
+			BindTheme(accent, "BackgroundColor3", "Secondary")
 			local label = Make("TextLabel", {
 				Parent = item,
 				BackgroundTransparency = 1,
-				Position = UDim2.new(0, 8, 0, 0),
-				Size = UDim2.new(1, -16, 1, 0),
+				Position = UDim2.new(0, 9, 0, 0),
+				Size = UDim2.new(1, -9, 1, 0),
 				Font = Enum.Font.Code,
 				Text = currentText,
 				TextSize = 13,
