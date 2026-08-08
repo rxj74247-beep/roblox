@@ -362,17 +362,35 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		TextColor3 = SecondaryColor
 	})
 	BindTheme(appName, "TextColor3", "Secondary")
-	local tabStrip = Make("Frame", {
+	local tabStrip = Make("ScrollingFrame", {
 		Parent = topBar,
 		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
 		Position = UDim2.new(0, 194, 0, 0),
-		Size = UDim2.new(1, -204, 1, 0)
+		Size = UDim2.new(1, -204, 1, 0),
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		ScrollBarThickness = 0,
+		ScrollingDirection = Enum.ScrollingDirection.X,
+		ElasticBehavior = Enum.ElasticBehavior.WhenScrollable,
+		Active = true,
+		ClipsDescendants = true
 	})
 	local tabLayout = Instance.new("UIListLayout")
 	tabLayout.FillDirection = Enum.FillDirection.Horizontal
 	tabLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 	tabLayout.Padding = UDim.new(0, 8)
 	tabLayout.Parent = tabStrip
+	local function SyncTabCanvas()
+		tabStrip.CanvasSize = UDim2.new(0, math.max(0, tabLayout.AbsoluteContentSize.X + 6), 0, 0)
+	end
+	tabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(SyncTabCanvas)
+	tabStrip.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseWheel then
+			local MaxX = math.max(0, tabLayout.AbsoluteContentSize.X - tabStrip.AbsoluteSize.X + 6)
+			tabStrip.CanvasPosition = Vector2.new(math.clamp(tabStrip.CanvasPosition.X - input.Position.Z * 48, 0, MaxX), 0)
+		end
+	end)
+	SyncTabCanvas()
 	local topLine = Make("Frame", {
 		Parent = main,
 		BackgroundColor3 = SecondaryColor,
@@ -432,6 +450,13 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		TextColor3 = SecondaryColor
 	})
 	BindTheme(footerAccent, "TextColor3", "Secondary")
+	function lib:SetVersionStatus(status)
+		local value = string.lower(tostring(status or "source"))
+		footerAccent.Text = value == "secure" and "secure" or "source"
+	end
+	function lib:GetVersionStatus()
+		return footerAccent.Text
+	end
 	main:TweenSize(UDim2.new(0, 720, 0, 500), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.35, true)
 	MakeDraggable(topBar, main)
 	local hidden = false
@@ -670,6 +695,13 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			Tween(buttonLabel, 0.12, {TextColor3 = TextColor})
 			Tween(selection, 0.12, {BackgroundTransparency = 0.88})
 			indicator:TweenSize(UDim2.new(0.7, 0, 0, 2), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
+			task.defer(function()
+				local Left = button.AbsolutePosition.X - tabStrip.AbsolutePosition.X + tabStrip.CanvasPosition.X
+				local Right = Left + button.AbsoluteSize.X
+				local ViewLeft = tabStrip.CanvasPosition.X
+				local ViewRight = ViewLeft + tabStrip.AbsoluteSize.X
+				if Left < ViewLeft then tabStrip.CanvasPosition = Vector2.new(math.max(0, Left - 6), 0) elseif Right > ViewRight then tabStrip.CanvasPosition = Vector2.new(math.max(0, Right - tabStrip.AbsoluteSize.X + 6), 0) end
+			end)
 		end
 		button.Name = "TabButton"
 		buttonLabel.Name = "Label"
@@ -908,29 +940,32 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			local currentList = list or {}
 			local selectedValue = nil
 			local opened = false
-			local dropdownFrame = CreateBaseItem(parent, 32)
+			local closedHeight = 36
+			local dropdownFrame = CreateBaseItem(parent, closedHeight)
 			local title = Make("TextLabel", {
 				Parent = dropdownFrame,
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0, 10, 0, 0),
-				Size = UDim2.new(0.5, 0, 1, 0),
+				Size = UDim2.new(0.52, -10, 0, closedHeight),
 				Font = Enum.Font.Code,
 				Text = tostring(text),
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
-				TextColor3 = TextColor
+				TextColor3 = TextColor,
+				TextTruncate = Enum.TextTruncate.AtEnd
 			})
 			BindTheme(title, "TextColor3", "Text")
 			local selected = Make("TextLabel", {
 				Parent = dropdownFrame,
 				BackgroundTransparency = 1,
-				Position = UDim2.new(0.5, 0, 0, 0),
-				Size = UDim2.new(0.5, -28, 1, 0),
+				Position = UDim2.new(0.52, 0, 0, 0),
+				Size = UDim2.new(0.48, -30, 0, closedHeight),
 				Font = Enum.Font.Code,
 				Text = "",
-				TextSize = 13,
+				TextSize = 12,
 				TextXAlignment = Enum.TextXAlignment.Right,
-				TextColor3 = MutedText()
+				TextColor3 = MutedText(),
+				TextTruncate = Enum.TextTruncate.AtEnd
 			})
 			BindThemeCallback("Text", function()
 				if selected and selected.Parent then
@@ -940,8 +975,8 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			local arrow = Make("TextLabel", {
 				Parent = dropdownFrame,
 				BackgroundTransparency = 1,
-				Position = UDim2.new(1, -20, 0, 0),
-				Size = UDim2.new(0, 20, 1, 0),
+				Position = UDim2.new(1, -24, 0, 0),
+				Size = UDim2.new(0, 24, 0, closedHeight),
 				Font = Enum.Font.Code,
 				Text = "+",
 				TextSize = 14,
@@ -951,27 +986,64 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			local hit = Make("TextButton", {
 				Parent = dropdownFrame,
 				BackgroundTransparency = 1,
-				Size = UDim2.new(1, 0, 0, 32),
+				Size = UDim2.new(1, 0, 0, closedHeight),
 				Text = "",
-				AutoButtonColor = false
+				AutoButtonColor = false,
+				ZIndex = 3
 			})
+			local divider = Make("Frame", {
+				Parent = dropdownFrame,
+				BackgroundColor3 = BorderColor(),
+				BorderSizePixel = 0,
+				Position = UDim2.new(0, 8, 0, closedHeight),
+				Size = UDim2.new(1, -16, 0, 1),
+				Visible = false
+			})
+			BindThemeCallback("Primary", function()
+				if divider and divider.Parent then
+					divider.BackgroundColor3 = BorderColor()
+				end
+			end)
 			local listHolder = Make("ScrollingFrame", {
 				Parent = dropdownFrame,
-				BackgroundTransparency = 1,
-				Position = UDim2.new(0, 6, 0, 32),
+				BackgroundColor3 = PanelSecondary(),
+				BackgroundTransparency = 0,
+				Position = UDim2.new(0, 6, 0, closedHeight + 5),
 				Size = UDim2.new(1, -12, 0, 0),
 				CanvasSize = UDim2.new(),
 				BorderSizePixel = 0,
 				ScrollBarThickness = 2,
-				Visible = true,
 				TopImage = "rbxassetid://0",
 				MidImage = "rbxassetid://0",
 				BottomImage = "rbxassetid://0",
-				ScrollBarImageColor3 = SecondaryColor
+				ScrollBarImageColor3 = SecondaryColor,
+				ZIndex = 4
 			})
+			ApplyCorner(listHolder, 3)
+			ApplyStroke(listHolder)
 			BindTheme(listHolder, "ScrollBarImageColor3", "Secondary")
-			local listLayout = CreateList(listHolder, 4)
-			SyncCanvas(listHolder, listLayout, 2)
+			BindThemeCallback("Primary", function()
+				if listHolder and listHolder.Parent then
+					listHolder.BackgroundColor3 = PanelSecondary()
+				end
+			end)
+			local listLayout = CreateList(listHolder, 2)
+			ApplyPadding(listHolder, 4, 4, 4, 4)
+			SyncCanvas(listHolder, listLayout, 8)
+			local function menuHeight()
+				if #currentList == 0 then
+					return 0
+				end
+				return math.min(#currentList * 28 + 8, 120)
+			end
+			local function setOpened(value)
+				opened = value and #currentList > 0
+				arrow.Text = opened and "-" or "+"
+				divider.Visible = opened
+				local height = opened and menuHeight() or 0
+				dropdownFrame:TweenSize(UDim2.new(1, 0, 0, opened and (closedHeight + height + 9) or closedHeight), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
+				listHolder:TweenSize(UDim2.new(1, -12, 0, height), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
+			end
 			local function rebuild()
 				for _, child in ipairs(listHolder:GetChildren()) do
 					if child:IsA("GuiObject") then
@@ -979,57 +1051,69 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 					end
 				end
 				for _, value in ipairs(currentList) do
-					local item = CreateBaseItem(listHolder, 24)
-					local itemBtn = Make("TextButton", {
-						Parent = item,
-						BackgroundTransparency = 1,
-						Size = UDim2.new(1, 0, 1, 0),
-						Text = "",
-						AutoButtonColor = false
-					})
-					local itemText = Make("TextLabel", {
-						Parent = item,
-						BackgroundTransparency = 1,
-						Position = UDim2.new(0, 8, 0, 0),
-						Size = UDim2.new(1, -16, 1, 0),
-						Font = Enum.Font.Code,
+					local item = Make("TextButton", {
+						Parent = listHolder,
+						BackgroundColor3 = PanelSecondary(),
+						BorderSizePixel = 0,
+						Size = UDim2.new(1, 0, 0, 26),
 						Text = tostring(value),
-						TextSize = 13,
+						Font = Enum.Font.Code,
+						TextSize = 12,
+						TextColor3 = value == selectedValue and SecondaryColor or TextColor,
 						TextXAlignment = Enum.TextXAlignment.Left,
-						TextColor3 = TextColor
+						AutoButtonColor = false,
+						ZIndex = 5
 					})
-					BindTheme(itemText, "TextColor3", "Text")
-					itemBtn.MouseButton1Click:Connect(function()
+					ApplyCorner(item, 3)
+					ApplyPadding(item, 8, 8, 0, 0)
+					BindThemeCallback("Primary", function()
+						if item and item.Parent then
+							item.BackgroundColor3 = PanelSecondary()
+						end
+					end)
+					BindThemeCallback("Text", function()
+						if item and item.Parent and value ~= selectedValue then
+							item.TextColor3 = TextColor
+						end
+					end)
+					BindThemeCallback("Secondary", function()
+						if item and item.Parent and value == selectedValue then
+							item.TextColor3 = SecondaryColor
+						end
+					end)
+					item.MouseEnter:Connect(function()
+						Tween(item, 0.1, {BackgroundColor3 = HoverPrimary()})
+					end)
+					item.MouseLeave:Connect(function()
+						Tween(item, 0.1, {BackgroundColor3 = PanelSecondary()})
+					end)
+					item.MouseButton1Click:Connect(function()
 						selectedValue = value
 						selected.Text = tostring(value)
-						opened = false
-						arrow.Text = "+"
-						dropdownFrame:TweenSize(UDim2.new(1, 0, 0, 32), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
+						setOpened(false)
+						rebuild()
 						pcall(callback, value)
 					end)
-				end
-				local count = #currentList
-				listHolder.Size = UDim2.new(1, -12, 0, math.min(count * 28, 116))
-				if not opened then
-					listHolder.Size = UDim2.new(1, -12, 0, 0)
 				end
 			end
 			rebuild()
 			hit.MouseButton1Click:Connect(function()
-				opened = not opened
-				arrow.Text = opened and "-" or "+"
-				local target = opened and (32 + math.min(#currentList * 28, 116) + 6) or 32
-				dropdownFrame:TweenSize(UDim2.new(1, 0, 0, target), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
-				listHolder:TweenSize(UDim2.new(1, -12, 0, opened and math.min(#currentList * 28, 116) or 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
+				setOpened(not opened)
 			end)
 			local api = {}
 			function api:UpdateList(newList)
 				currentList = newList or {}
+				if selectedValue ~= nil and not table.find(currentList, selectedValue) then
+					selectedValue = nil
+					selected.Text = ""
+				end
+				setOpened(false)
 				rebuild()
 			end
 			function api:UpdateSelected(value)
 				selectedValue = value
 				selected.Text = value and tostring(value) or ""
+				rebuild()
 			end
 			function api:GetCurrentValue()
 				return selectedValue
@@ -1037,6 +1121,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			function api:SetCurrentValue(value, fire)
 				selectedValue = value
 				selected.Text = value and tostring(value) or ""
+				rebuild()
 				if fire ~= false then
 					pcall(callback, value)
 				end
@@ -1048,27 +1133,29 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			local currentList = list or {}
 			local currentValues = currentListArg or {}
 			local opened = false
-			local frame = CreateBaseItem(parent, 32)
+			local closedHeight = 36
+			local frame = CreateBaseItem(parent, closedHeight)
 			local title = Make("TextLabel", {
 				Parent = frame,
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0, 10, 0, 0),
-				Size = UDim2.new(0.5, 0, 1, 0),
+				Size = UDim2.new(0.5, -10, 0, closedHeight),
 				Font = Enum.Font.Code,
 				Text = tostring(text),
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
-				TextColor3 = TextColor
+				TextColor3 = TextColor,
+				TextTruncate = Enum.TextTruncate.AtEnd
 			})
 			BindTheme(title, "TextColor3", "Text")
 			local selected = Make("TextLabel", {
 				Parent = frame,
 				BackgroundTransparency = 1,
-				Position = UDim2.new(0.4, 0, 0, 0),
-				Size = UDim2.new(0.6, -28, 1, 0),
+				Position = UDim2.new(0.5, 0, 0, 0),
+				Size = UDim2.new(0.5, -30, 0, closedHeight),
 				Font = Enum.Font.Code,
 				Text = table.concat(currentValues, ", "),
-				TextSize = 13,
+				TextSize = 12,
 				TextXAlignment = Enum.TextXAlignment.Right,
 				TextColor3 = MutedText(),
 				TextTruncate = Enum.TextTruncate.AtEnd
@@ -1081,8 +1168,8 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			local arrow = Make("TextLabel", {
 				Parent = frame,
 				BackgroundTransparency = 1,
-				Position = UDim2.new(1, -20, 0, 0),
-				Size = UDim2.new(0, 20, 1, 0),
+				Position = UDim2.new(1, -24, 0, 0),
+				Size = UDim2.new(0, 24, 0, closedHeight),
 				Font = Enum.Font.Code,
 				Text = "+",
 				TextSize = 14,
@@ -1092,14 +1179,29 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			local hit = Make("TextButton", {
 				Parent = frame,
 				BackgroundTransparency = 1,
-				Size = UDim2.new(1, 0, 0, 32),
+				Size = UDim2.new(1, 0, 0, closedHeight),
 				Text = "",
-				AutoButtonColor = false
+				AutoButtonColor = false,
+				ZIndex = 3
 			})
+			local divider = Make("Frame", {
+				Parent = frame,
+				BackgroundColor3 = BorderColor(),
+				BorderSizePixel = 0,
+				Position = UDim2.new(0, 8, 0, closedHeight),
+				Size = UDim2.new(1, -16, 0, 1),
+				Visible = false
+			})
+			BindThemeCallback("Primary", function()
+				if divider and divider.Parent then
+					divider.BackgroundColor3 = BorderColor()
+				end
+			end)
 			local listHolder = Make("ScrollingFrame", {
 				Parent = frame,
-				BackgroundTransparency = 1,
-				Position = UDim2.new(0, 6, 0, 32),
+				BackgroundColor3 = PanelSecondary(),
+				BackgroundTransparency = 0,
+				Position = UDim2.new(0, 6, 0, closedHeight + 5),
 				Size = UDim2.new(1, -12, 0, 0),
 				CanvasSize = UDim2.new(),
 				BorderSizePixel = 0,
@@ -1107,13 +1209,36 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				TopImage = "rbxassetid://0",
 				MidImage = "rbxassetid://0",
 				BottomImage = "rbxassetid://0",
-				ScrollBarImageColor3 = SecondaryColor
+				ScrollBarImageColor3 = SecondaryColor,
+				ZIndex = 4
 			})
+			ApplyCorner(listHolder, 3)
+			ApplyStroke(listHolder)
 			BindTheme(listHolder, "ScrollBarImageColor3", "Secondary")
-			local listLayout = CreateList(listHolder, 4)
-			SyncCanvas(listHolder, listLayout, 2)
+			BindThemeCallback("Primary", function()
+				if listHolder and listHolder.Parent then
+					listHolder.BackgroundColor3 = PanelSecondary()
+				end
+			end)
+			local listLayout = CreateList(listHolder, 2)
+			ApplyPadding(listHolder, 4, 4, 4, 4)
+			SyncCanvas(listHolder, listLayout, 8)
 			local function syncText()
 				selected.Text = table.concat(currentValues, ", ")
+			end
+			local function menuHeight()
+				if #currentList == 0 then
+					return 0
+				end
+				return math.min(#currentList * 28 + 8, 120)
+			end
+			local function setOpened(value)
+				opened = value and #currentList > 0
+				arrow.Text = opened and "-" or "+"
+				divider.Visible = opened
+				local height = opened and menuHeight() or 0
+				frame:TweenSize(UDim2.new(1, 0, 0, opened and (closedHeight + height + 9) or closedHeight), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
+				listHolder:TweenSize(UDim2.new(1, -12, 0, height), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
 			end
 			local function rebuild()
 				for _, child in ipairs(listHolder:GetChildren()) do
@@ -1122,44 +1247,56 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 					end
 				end
 				for _, value in ipairs(currentList) do
-					local item = CreateBaseItem(listHolder, 24)
+					local item = Make("TextButton", {
+						Parent = listHolder,
+						BackgroundColor3 = PanelSecondary(),
+						BorderSizePixel = 0,
+						Size = UDim2.new(1, 0, 0, 26),
+						Text = tostring(value),
+						Font = Enum.Font.Code,
+						TextSize = 12,
+						TextColor3 = TextColor,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						AutoButtonColor = false,
+						ZIndex = 5
+					})
+					ApplyCorner(item, 3)
+					ApplyPadding(item, 28, 8, 0, 0)
+					BindTheme(item, "TextColor3", "Text")
+					BindThemeCallback("Primary", function()
+						if item and item.Parent then
+							item.BackgroundColor3 = PanelSecondary()
+						end
+					end)
 					local marker = Make("Frame", {
 						Parent = item,
-						BackgroundColor3 = Color3.fromRGB(16, 16, 16),
+						BackgroundColor3 = PrimaryColor,
 						BorderSizePixel = 0,
-						Position = UDim2.new(0, 6, 0.5, -6),
-						Size = UDim2.new(0, 12, 0, 12)
+						Position = UDim2.new(0, -20, 0.5, -6),
+						Size = UDim2.new(0, 12, 0, 12),
+						ZIndex = 6
 					})
-					ApplyStroke(marker, Color3.fromRGB(40, 40, 40))
+					ApplyCorner(marker, 2)
+					ApplyStroke(marker)
+					BindTheme(marker, "BackgroundColor3", "Primary")
 					local markFill = Make("Frame", {
 						Parent = marker,
 						BackgroundColor3 = SecondaryColor,
 						BorderSizePixel = 0,
 						Position = UDim2.new(0, 2, 0, 2),
 						Size = UDim2.new(1, -4, 1, -4),
-						Visible = table.find(currentValues, value) ~= nil
+						Visible = table.find(currentValues, value) ~= nil,
+						ZIndex = 7
 					})
+					ApplyCorner(markFill, 1)
 					BindTheme(markFill, "BackgroundColor3", "Secondary")
-					local itemText = Make("TextLabel", {
-						Parent = item,
-						BackgroundTransparency = 1,
-						Position = UDim2.new(0, 26, 0, 0),
-						Size = UDim2.new(1, -32, 1, 0),
-						Font = Enum.Font.Code,
-						Text = tostring(value),
-						TextSize = 13,
-						TextXAlignment = Enum.TextXAlignment.Left,
-						TextColor3 = TextColor
-					})
-					BindTheme(itemText, "TextColor3", "Text")
-					local itemBtn = Make("TextButton", {
-						Parent = item,
-						BackgroundTransparency = 1,
-						Size = UDim2.new(1, 0, 1, 0),
-						Text = "",
-						AutoButtonColor = false
-					})
-					itemBtn.MouseButton1Click:Connect(function()
+					item.MouseEnter:Connect(function()
+						Tween(item, 0.1, {BackgroundColor3 = HoverPrimary()})
+					end)
+					item.MouseLeave:Connect(function()
+						Tween(item, 0.1, {BackgroundColor3 = PanelSecondary()})
+					end)
+					item.MouseButton1Click:Connect(function()
 						local index = table.find(currentValues, value)
 						if index then
 							table.remove(currentValues, index)
@@ -1174,15 +1311,12 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			end
 			rebuild()
 			hit.MouseButton1Click:Connect(function()
-				opened = not opened
-				arrow.Text = opened and "-" or "+"
-				local height = opened and math.min(#currentList * 28, 116) or 0
-				frame:TweenSize(UDim2.new(1, 0, 0, opened and (32 + height + 6) or 32), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
-				listHolder:TweenSize(UDim2.new(1, -12, 0, height), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
+				setOpened(not opened)
 			end)
 			local api = {}
 			function api:UpdateList(newList)
 				currentList = newList or {}
+				setOpened(false)
 				rebuild()
 			end
 			function api:UpdateCurrentList(newCurrentList)
