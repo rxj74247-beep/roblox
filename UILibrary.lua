@@ -493,21 +493,17 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		Parent = footer,
 		BackgroundTransparency = 1,
 		Position = UDim2.new(0, 58, 0, 2),
-		Size = UDim2.new(0, 52, 0, 18),
+		Size = UDim2.new(0, 72, 0, 18),
 		Font = Enum.Font.Code,
-		Text = "source",
+		Text = "Public",
 		TextSize = 12,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = SecondaryColor
 	})
-	BindThemeCallback("Secondary", function()
-		if footerAccent and footerAccent.Parent and footerAccent.Text ~= "secure" then footerAccent.TextColor3 = SecondaryColor end
-	end)
+	BindTheme(footerAccent, "TextColor3", "Secondary")
 	function lib:SetVersionStatus(status)
-		local value = string.lower(tostring(status or "source"))
-		local secure = value == "secure"
-		footerAccent.Text = secure and "secure" or "source"
-		footerAccent.TextColor3 = secure and Color3.fromRGB(60, 255, 110) or SecondaryColor
+		local value = string.lower(tostring(status or "public"))
+		footerAccent.Text = value == "source" and "source" or "Public"
 	end
 	function lib:GetVersionStatus()
 		return footerAccent.Text
@@ -544,25 +540,27 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 	footerText.ZIndex = 9
 	footerAccent.ZIndex = 9
 	local ResizeHandle = Make("TextButton", {
-		Parent = footerAccent.Parent,
+		Parent = footer,
 		Name = "ResizeHandle",
-		AnchorPoint = Vector2.new(0, 0),
-		Position = UDim2.new(0, 116, 0, 2),
-		Size = UDim2.fromOffset(TouchMode and 92 or 78, 20),
-		BackgroundColor3 = SecondaryColor,
-		BackgroundTransparency = 0,
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -4, 1, -2),
+		Size = UDim2.fromOffset(TouchMode and 30 or 24, TouchMode and 26 or 20),
+		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		Text = "RESIZE ↘",
+		Text = "◢",
 		Font = Enum.Font.Code,
-		TextSize = TouchMode and 13 or 12,
-		TextColor3 = Color3.fromRGB(255, 255, 255),
+		TextSize = TouchMode and 22 or 18,
+		TextColor3 = Color3.new(1 - PrimaryColor.R, 1 - PrimaryColor.G, 1 - PrimaryColor.B),
 		AutoButtonColor = false,
 		Active = true,
 		Selectable = false,
-		ZIndex = 10
+		ZIndex = 9
 	})
-	ApplyCorner(ResizeHandle, 3)
-	BindTheme(ResizeHandle, "BackgroundColor3", "Secondary")
+	BindThemeCallback("Primary", function()
+		if ResizeHandle and ResizeHandle.Parent then
+			ResizeHandle.TextColor3 = Color3.new(1 - PrimaryColor.R, 1 - PrimaryColor.G, 1 - PrimaryColor.B)
+		end
+	end)
 	local Resizing = false
 	local ResizeInput = nil
 	local ResizeStart = nil
