@@ -535,47 +535,47 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 	main:TweenSize(UDim2.fromOffset(WindowSize.X, WindowSize.Y), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.35, true)
 	MakeDraggable(topBar, main)
 	local ResizeHandle = Make("TextButton", {
-		Parent = main,
+		Parent = ui,
 		Name = "ResizeHandle",
 		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -5, 1, -5),
-		Size = UDim2.fromOffset(TouchMode and 42 or 34, TouchMode and 42 or 34),
+		Position = UDim2.fromOffset(0, 0),
+		Size = UDim2.fromOffset(TouchMode and 44 or 36, TouchMode and 44 or 36),
 		BackgroundColor3 = PanelSecondary(),
-		BackgroundTransparency = 0.08,
+		BackgroundTransparency = 0,
 		BorderSizePixel = 0,
-		Text = "",
+		Text = "RESIZE",
+		Font = Enum.Font.Code,
+		TextSize = TouchMode and 9 or 8,
+		TextColor3 = SecondaryColor,
 		AutoButtonColor = false,
 		Active = true,
 		Selectable = false,
-		ZIndex = 9
+		ZIndex = 10
 	})
 	ApplyCorner(ResizeHandle, 4)
 	local ResizeStroke = ApplyStroke(ResizeHandle, SecondaryColor)
 	ResizeStroke.Thickness = 1
-	local GripBars = {}
-	for i = 1, 3 do
-		local Length = 8 + (i - 1) * 6
-		local Bar = Make("Frame", {
-			Parent = ResizeHandle,
-			AnchorPoint = Vector2.new(1, 0.5),
-			Position = UDim2.new(1, -5, 1, -(5 + (i - 1) * 5)),
-			Size = UDim2.fromOffset(Length, 2),
-			BackgroundColor3 = SecondaryColor,
-			BorderSizePixel = 0,
-			Rotation = -45,
-			ZIndex = 10
-		})
-		table.insert(GripBars, Bar)
+	local function SyncResizeHandle()
+		if not ResizeHandle or not ResizeHandle.Parent or not main or not main.Parent then return end
+		ResizeHandle.Visible = main.Visible and not hidden
+		if ResizeHandle.Visible then
+			local P = main.AbsolutePosition
+			local S = main.AbsoluteSize
+			ResizeHandle.Position = UDim2.fromOffset(P.X + S.X - 4, P.Y + S.Y - 4)
+		end
 	end
+	main:GetPropertyChangedSignal("AbsolutePosition"):Connect(SyncResizeHandle)
+	main:GetPropertyChangedSignal("AbsoluteSize"):Connect(SyncResizeHandle)
+	main:GetPropertyChangedSignal("Visible"):Connect(SyncResizeHandle)
+	RunService.RenderStepped:Connect(SyncResizeHandle)
 	BindThemeCallback("Primary", function()
 		if ResizeHandle and ResizeHandle.Parent then ResizeHandle.BackgroundColor3 = PanelSecondary() end
 	end)
 	BindThemeCallback("Secondary", function()
 		if ResizeStroke and ResizeStroke.Parent then ResizeStroke.Color = SecondaryColor end
-		for _, Bar in ipairs(GripBars) do
-			if Bar and Bar.Parent then Bar.BackgroundColor3 = SecondaryColor end
-		end
+		if ResizeHandle and ResizeHandle.Parent then ResizeHandle.TextColor3 = SecondaryColor end
 	end)
+	task.defer(SyncResizeHandle)
 	local Resizing = false
 	local ResizeInput = nil
 	local ResizeStart = nil
