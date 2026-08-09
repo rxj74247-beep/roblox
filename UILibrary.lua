@@ -538,18 +538,43 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		Parent = main,
 		Name = "ResizeHandle",
 		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -3, 1, -3),
-		Size = UDim2.fromOffset(TouchMode and 30 or 22, TouchMode and 30 or 22),
-		BackgroundTransparency = 1,
-		Text = "◢",
-		Font = Enum.Font.Code,
-		TextSize = TouchMode and 18 or 14,
-		TextColor3 = MutedText(),
+		Position = UDim2.new(1, -2, 1, -2),
+		Size = UDim2.fromOffset(TouchMode and 40 or 30, TouchMode and 40 or 30),
+		BackgroundColor3 = PanelSecondary(),
+		BackgroundTransparency = 0.08,
+		BorderSizePixel = 0,
+		Text = "",
 		AutoButtonColor = false,
-		ZIndex = 40
+		Active = true,
+		Selectable = false,
+		ZIndex = 1000
 	})
-	BindThemeCallback("Text", function()
-		if ResizeHandle and ResizeHandle.Parent then ResizeHandle.TextColor3 = MutedText() end
+	ApplyCorner(ResizeHandle, 4)
+	local ResizeStroke = ApplyStroke(ResizeHandle, SecondaryColor)
+	ResizeStroke.Thickness = 1
+	local GripBars = {}
+	for i = 1, 3 do
+		local Length = 8 + (i - 1) * 6
+		local Bar = Make("Frame", {
+			Parent = ResizeHandle,
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -5, 1, -(5 + (i - 1) * 5)),
+			Size = UDim2.fromOffset(Length, 2),
+			BackgroundColor3 = SecondaryColor,
+			BorderSizePixel = 0,
+			Rotation = -45,
+			ZIndex = 1001
+		})
+		table.insert(GripBars, Bar)
+	end
+	BindThemeCallback("Primary", function()
+		if ResizeHandle and ResizeHandle.Parent then ResizeHandle.BackgroundColor3 = PanelSecondary() end
+	end)
+	BindThemeCallback("Secondary", function()
+		if ResizeStroke and ResizeStroke.Parent then ResizeStroke.Color = SecondaryColor end
+		for _, Bar in ipairs(GripBars) do
+			if Bar and Bar.Parent then Bar.BackgroundColor3 = SecondaryColor end
+		end
 	end)
 	local Resizing = false
 	local ResizeInput = nil
