@@ -535,39 +535,29 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 	main:TweenSize(UDim2.fromOffset(WindowSize.X, WindowSize.Y), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.35, true)
 	MakeDraggable(topBar, main)
 	footer.ZIndex = 8
+	footer.ClipsDescendants = false
 	footerLine.ZIndex = 8
 	footerText.ZIndex = 9
 	footerAccent.ZIndex = 9
 	local ResizeHandle = Make("TextButton", {
-		Parent = footer,
+		Parent = footerText.Parent,
 		Name = "ResizeHandle",
-		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -3, 0.5, 0),
-		Size = UDim2.fromOffset(21, 18),
-		BackgroundColor3 = PanelSecondary(),
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -8, 0, 3),
+		Size = UDim2.fromOffset(TouchMode and 78 or 64, 18),
+		BackgroundColor3 = SecondaryColor,
 		BackgroundTransparency = 0,
 		BorderSizePixel = 0,
-		Text = "",
+		Text = "RESIZE",
+		Font = Enum.Font.Code,
+		TextSize = TouchMode and 13 or 12,
+		TextColor3 = Color3.fromRGB(255, 255, 255),
 		AutoButtonColor = false,
 		Active = true,
 		Selectable = false,
-		ZIndex = 10
+		ZIndex = footerAccent.ZIndex
 	})
-	ApplyCorner(ResizeHandle, 3)
-	local ResizeStroke = ApplyStroke(ResizeHandle, SecondaryColor)
-	ResizeStroke.Thickness = 1
-	local Grip1 = Make("Frame", {Parent = ResizeHandle, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -3, 1, -3), Size = UDim2.fromOffset(9, 2), Rotation = -45, BackgroundColor3 = SecondaryColor, BorderSizePixel = 0, ZIndex = 11})
-	local Grip2 = Make("Frame", {Parent = ResizeHandle, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -3, 1, -7), Size = UDim2.fromOffset(6, 2), Rotation = -45, BackgroundColor3 = SecondaryColor, BorderSizePixel = 0, ZIndex = 11})
-	local Grip3 = Make("Frame", {Parent = ResizeHandle, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -7, 1, -3), Size = UDim2.fromOffset(6, 2), Rotation = -45, BackgroundColor3 = SecondaryColor, BorderSizePixel = 0, ZIndex = 11})
-	BindThemeCallback("Primary", function()
-		if ResizeHandle and ResizeHandle.Parent then ResizeHandle.BackgroundColor3 = PanelSecondary() end
-	end)
-	BindThemeCallback("Secondary", function()
-		if ResizeStroke and ResizeStroke.Parent then ResizeStroke.Color = SecondaryColor end
-		if Grip1 and Grip1.Parent then Grip1.BackgroundColor3 = SecondaryColor end
-		if Grip2 and Grip2.Parent then Grip2.BackgroundColor3 = SecondaryColor end
-		if Grip3 and Grip3.Parent then Grip3.BackgroundColor3 = SecondaryColor end
-	end)
+	BindTheme(ResizeHandle, "BackgroundColor3", "Secondary")
 	local Resizing = false
 	local ResizeInput = nil
 	local ResizeStart = nil
