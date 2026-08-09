@@ -4,19 +4,53 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local TouchMode = UserInputService.TouchEnabled
+local WindowStateFile = "SouthLondonUILibrary.json"
 local function GetViewportSize()
 	local Camera = workspace.CurrentCamera
 	return Camera and Camera.ViewportSize or Vector2.new(1280, 720)
 end
+local function GetWindowBounds()
+	local Viewport = GetViewportSize()
+	local MaxWidth = math.max(260, Viewport.X - 16)
+	local MaxHeight = math.max(240, Viewport.Y - 16)
+	local MinWidth = math.min(TouchMode and 300 or 460, MaxWidth)
+	local MinHeight = math.min(TouchMode and 280 or 330, MaxHeight)
+	return MinWidth, MinHeight, MaxWidth, MaxHeight
+end
+local function ClampWindowSize(Size)
+	local MinWidth, MinHeight, MaxWidth, MaxHeight = GetWindowBounds()
+	return Vector2.new(math.clamp(math.floor(Size.X + 0.5), MinWidth, MaxWidth), math.clamp(math.floor(Size.Y + 0.5), MinHeight, MaxHeight))
+end
 local function GetWindowTargetSize()
 	local Viewport = GetViewportSize()
 	if TouchMode then
-		return Vector2.new(math.max(300, math.min(720, Viewport.X - 12)), math.max(280, math.min(500, Viewport.Y - 18)))
+		return ClampWindowSize(Vector2.new(math.min(620, Viewport.X - 24), math.min(440, Viewport.Y - 28)))
 	end
-	return Vector2.new(720, 500)
+	return ClampWindowSize(Vector2.new(660, 450))
+end
+local function LoadSavedWindowSize()
+	if typeof(readfile) ~= "function" or typeof(isfile) ~= "function" then return nil end
+	local SuccessExists, Exists = pcall(isfile, WindowStateFile)
+	if not SuccessExists or not Exists then return nil end
+	local SuccessRead, Raw = pcall(readfile, WindowStateFile)
+	if not SuccessRead or type(Raw) ~= "string" then return nil end
+	local SuccessDecode, Data = pcall(function() return HttpService:JSONDecode(Raw) end)
+	if not SuccessDecode or type(Data) ~= "table" then return nil end
+	local Width = tonumber(Data.Width)
+	local Height = tonumber(Data.Height)
+	if not Width or not Height then return nil end
+	return ClampWindowSize(Vector2.new(Width, Height))
+end
+local function SaveWindowSize(Size)
+	if typeof(writefile) ~= "function" then return false end
+	local Clamped = ClampWindowSize(Size)
+	local SuccessEncode, Raw = pcall(function() return HttpService:JSONEncode({Width = Clamped.X, Height = Clamped.Y}) end)
+	if not SuccessEncode then return false end
+	return pcall(writefile, WindowStateFile, Raw)
 end
 local PrimaryColor = Color3.fromRGB(12, 13, 16)
 local SecondaryColor = Color3.fromRGB(185, 18, 34)
@@ -474,10 +508,11 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 	function lib:GetVersionStatus()
 		return footerAccent.Text
 	end
-	local WindowSize = GetWindowTargetSize()
+	local WindowSize = LoadSavedWindowSize() or GetWindowTargetSize()
+	WindowSize = ClampWindowSize(WindowSize)
 	local hidden = false
 	local function ApplyWindowSize(Animated)
-		WindowSize = GetWindowTargetSize()
+		WindowSize = ClampWindowSize(WindowSize)
 		if hidden then return end
 		local Target = UDim2.fromOffset(WindowSize.X, WindowSize.Y)
 		if Animated then
@@ -499,6 +534,79 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 	end
 	main:TweenSize(UDim2.fromOffset(WindowSize.X, WindowSize.Y), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.35, true)
 	MakeDraggable(topBar, main)
+	local ResizeHandle = Make("TextButton", {
+		Parent = main,
+		Name = "ResizeHandle",
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -3, 1, -3),
+		Size = UDim2.fromOffset(TouchMode and 30 or 22, TouchMode and 30 or 22),
+		BackgroundTransparency = 1,
+		Text = "◢",
+		Font = Enum.Font.Code,
+		TextSize = TouchMode and 18 or 14,
+		TextColor3 = MutedText(),
+		AutoButtonColor = false,
+		ZIndex = 40
+	})
+	BindThemeCallback("Text", function()
+		if ResizeHandle and ResizeHandle.Parent then ResizeHandle.TextColor3 = MutedText() end
+	end)
+	local Resizing = false
+	local ResizeInput = nil
+	local ResizeStart = nil
+	local ResizeStartSize = nil
+	local ResizeStartPosition = nil
+	local function ResizeFromInput(Input)
+		if not Resizing or not ResizeStart or not ResizeStartSize then return end
+		local Delta = Input.Position - ResizeStart
+		local NewSize = ClampWindowSize(Vector2.new(ResizeStartSize.X + Delta.X, ResizeStartSize.Y + Delta.Y))
+		local AppliedDelta = NewSize - ResizeStartSize
+		WindowSize = NewSize
+		main.Size = UDim2.fromOffset(NewSize.X, NewSize.Y)
+		if ResizeStartPosition then
+			main.Position = UDim2.new(ResizeStartPosition.X.Scale, ResizeStartPosition.X.Offset + AppliedDelta.X * 0.5, ResizeStartPosition.Y.Scale, ResizeStartPosition.Y.Offset + AppliedDelta.Y * 0.5)
+		end
+	end
+	ResizeHandle.InputBegan:Connect(function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+			Resizing = true
+			ResizeInput = Input.UserInputType == Enum.UserInputType.Touch and Input or nil
+			ResizeStart = Input.Position
+			ResizeStartSize = Vector2.new(main.AbsoluteSize.X, main.AbsoluteSize.Y)
+			ResizeStartPosition = main.Position
+			Input.Changed:Connect(function()
+				if Input.UserInputState == Enum.UserInputState.End and Resizing then
+					Resizing = false
+					ResizeInput = nil
+					SaveWindowSize(WindowSize)
+				end
+			end)
+		end
+	end)
+	ResizeHandle.InputChanged:Connect(function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then ResizeInput = Input end
+	end)
+	UserInputService.InputChanged:Connect(function(Input)
+		if not Resizing then return end
+		if Input.UserInputType == Enum.UserInputType.MouseMovement or Input == ResizeInput then ResizeFromInput(Input) end
+	end)
+	UserInputService.InputEnded:Connect(function(Input)
+		if Resizing and (Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch) then
+			Resizing = false
+			ResizeInput = nil
+			SaveWindowSize(WindowSize)
+		end
+	end)
+	function lib:GetWindowSize()
+		return Vector2.new(WindowSize.X, WindowSize.Y)
+	end
+	function lib:SetWindowSize(Width, Height, Save)
+		local NewSize = ClampWindowSize(Vector2.new(tonumber(Width) or WindowSize.X, tonumber(Height) or WindowSize.Y))
+		WindowSize = NewSize
+		ApplyWindowSize(false)
+		if Save ~= false then SaveWindowSize(WindowSize) end
+		return Vector2.new(WindowSize.X, WindowSize.Y)
+	end
 	UserInputService.InputBegan:Connect(function(io, p)
 		if not p and io.KeyCode == CloseBind then SetHidden(not hidden) end
 	end)
