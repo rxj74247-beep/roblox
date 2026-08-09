@@ -538,8 +538,8 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		Parent = main,
 		Name = "ResizeHandle",
 		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -2, 1, -2),
-		Size = UDim2.fromOffset(TouchMode and 40 or 30, TouchMode and 40 or 30),
+		Position = UDim2.new(1, -5, 1, -5),
+		Size = UDim2.fromOffset(TouchMode and 42 or 34, TouchMode and 42 or 34),
 		BackgroundColor3 = PanelSecondary(),
 		BackgroundTransparency = 0.08,
 		BorderSizePixel = 0,
@@ -547,7 +547,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		AutoButtonColor = false,
 		Active = true,
 		Selectable = false,
-		ZIndex = 1000
+		ZIndex = 9
 	})
 	ApplyCorner(ResizeHandle, 4)
 	local ResizeStroke = ApplyStroke(ResizeHandle, SecondaryColor)
@@ -563,7 +563,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			BackgroundColor3 = SecondaryColor,
 			BorderSizePixel = 0,
 			Rotation = -45,
-			ZIndex = 1001
+			ZIndex = 10
 		})
 		table.insert(GripBars, Bar)
 	end
