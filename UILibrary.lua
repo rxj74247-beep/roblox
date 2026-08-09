@@ -534,48 +534,40 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 	end
 	main:TweenSize(UDim2.fromOffset(WindowSize.X, WindowSize.Y), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.35, true)
 	MakeDraggable(topBar, main)
+	footer.ZIndex = 8
+	footerLine.ZIndex = 8
+	footerText.ZIndex = 9
+	footerAccent.ZIndex = 9
 	local ResizeHandle = Make("TextButton", {
-		Parent = ui,
+		Parent = footer,
 		Name = "ResizeHandle",
-		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.fromOffset(0, 0),
-		Size = UDim2.fromOffset(TouchMode and 44 or 36, TouchMode and 44 or 36),
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -3, 0.5, 0),
+		Size = UDim2.fromOffset(21, 18),
 		BackgroundColor3 = PanelSecondary(),
 		BackgroundTransparency = 0,
 		BorderSizePixel = 0,
-		Text = "RESIZE",
-		Font = Enum.Font.Code,
-		TextSize = TouchMode and 9 or 8,
-		TextColor3 = SecondaryColor,
+		Text = "",
 		AutoButtonColor = false,
 		Active = true,
 		Selectable = false,
 		ZIndex = 10
 	})
-	ApplyCorner(ResizeHandle, 4)
+	ApplyCorner(ResizeHandle, 3)
 	local ResizeStroke = ApplyStroke(ResizeHandle, SecondaryColor)
 	ResizeStroke.Thickness = 1
-	local function SyncResizeHandle()
-		if not ResizeHandle or not ResizeHandle.Parent or not main or not main.Parent then return end
-		ResizeHandle.Visible = main.Visible and not hidden
-		if ResizeHandle.Visible then
-			local P = main.AbsolutePosition
-			local S = main.AbsoluteSize
-			ResizeHandle.Position = UDim2.fromOffset(P.X + S.X - 4, P.Y + S.Y - 4)
-		end
-	end
-	main:GetPropertyChangedSignal("AbsolutePosition"):Connect(SyncResizeHandle)
-	main:GetPropertyChangedSignal("AbsoluteSize"):Connect(SyncResizeHandle)
-	main:GetPropertyChangedSignal("Visible"):Connect(SyncResizeHandle)
-	RunService.RenderStepped:Connect(SyncResizeHandle)
+	local Grip1 = Make("Frame", {Parent = ResizeHandle, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -3, 1, -3), Size = UDim2.fromOffset(9, 2), Rotation = -45, BackgroundColor3 = SecondaryColor, BorderSizePixel = 0, ZIndex = 11})
+	local Grip2 = Make("Frame", {Parent = ResizeHandle, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -3, 1, -7), Size = UDim2.fromOffset(6, 2), Rotation = -45, BackgroundColor3 = SecondaryColor, BorderSizePixel = 0, ZIndex = 11})
+	local Grip3 = Make("Frame", {Parent = ResizeHandle, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -7, 1, -3), Size = UDim2.fromOffset(6, 2), Rotation = -45, BackgroundColor3 = SecondaryColor, BorderSizePixel = 0, ZIndex = 11})
 	BindThemeCallback("Primary", function()
 		if ResizeHandle and ResizeHandle.Parent then ResizeHandle.BackgroundColor3 = PanelSecondary() end
 	end)
 	BindThemeCallback("Secondary", function()
 		if ResizeStroke and ResizeStroke.Parent then ResizeStroke.Color = SecondaryColor end
-		if ResizeHandle and ResizeHandle.Parent then ResizeHandle.TextColor3 = SecondaryColor end
+		if Grip1 and Grip1.Parent then Grip1.BackgroundColor3 = SecondaryColor end
+		if Grip2 and Grip2.Parent then Grip2.BackgroundColor3 = SecondaryColor end
+		if Grip3 and Grip3.Parent then Grip3.BackgroundColor3 = SecondaryColor end
 	end)
-	task.defer(SyncResizeHandle)
 	local Resizing = false
 	local ResizeInput = nil
 	local ResizeStart = nil
