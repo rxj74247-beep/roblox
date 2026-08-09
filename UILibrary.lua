@@ -6,6 +6,18 @@ local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
+local TouchMode = UserInputService.TouchEnabled
+local function GetViewportSize()
+	local Camera = workspace.CurrentCamera
+	return Camera and Camera.ViewportSize or Vector2.new(1280, 720)
+end
+local function GetWindowTargetSize()
+	local Viewport = GetViewportSize()
+	if TouchMode then
+		return Vector2.new(math.max(300, math.min(720, Viewport.X - 12)), math.max(280, math.min(500, Viewport.Y - 18)))
+	end
+	return Vector2.new(720, 500)
+end
 local PrimaryColor = Color3.fromRGB(12, 13, 16)
 local SecondaryColor = Color3.fromRGB(185, 18, 34)
 local TextColor = Color3.fromRGB(218, 220, 224)
@@ -194,11 +206,13 @@ local function MakeDraggable(topbarobject, object)
 	end)
 end
 local function CreateBaseItem(parent, height)
+	height = height or 34
+	if TouchMode then height = math.max(height, 42) end
 	local holder = Make("Frame", {
 		Parent = parent,
 		BackgroundColor3 = PanelPrimary(),
 		BorderSizePixel = 0,
-		Size = UDim2.new(1, 0, 0, height or 34),
+		Size = UDim2.new(1, 0, 0, height),
 		ClipsDescendants = true
 	})
 	ApplyCorner(holder, 4)
@@ -337,6 +351,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 	UpdateTheme("Text")
 	local main = Make("Frame", {
 		Parent = ui,
+		Name = "MainWindow",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(0.5, 0, 0.5, 0),
 		Size = UDim2.new(0, 0, 0, 0),
@@ -459,28 +474,82 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 	function lib:GetVersionStatus()
 		return footerAccent.Text
 	end
-	main:TweenSize(UDim2.new(0, 720, 0, 500), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.35, true)
-	MakeDraggable(topBar, main)
+	local WindowSize = GetWindowTargetSize()
 	local hidden = false
+	local function ApplyWindowSize(Animated)
+		WindowSize = GetWindowTargetSize()
+		if hidden then return end
+		local Target = UDim2.fromOffset(WindowSize.X, WindowSize.Y)
+		if Animated then
+			main:TweenSize(Target, Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.25, true)
+		else
+			main.Size = Target
+		end
+		main.Position = UDim2.fromScale(0.5, 0.5)
+	end
+	local function SetHidden(State)
+		hidden = State and true or false
+		if hidden then
+			main:TweenSize(UDim2.fromOffset(WindowSize.X, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.2, true)
+			task.delay(0.2, function() if hidden and main.Parent then main.Visible = false end end)
+		else
+			main.Visible = true
+			ApplyWindowSize(true)
+		end
+	end
+	main:TweenSize(UDim2.fromOffset(WindowSize.X, WindowSize.Y), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.35, true)
+	MakeDraggable(topBar, main)
 	UserInputService.InputBegan:Connect(function(io, p)
-		if p then
-			return
-		end
-		if io.KeyCode == CloseBind then
-			hidden = not hidden
-			if hidden then
-				main:TweenSize(UDim2.new(0, 720, 0, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.25, true)
-				task.delay(0.25, function()
-					if hidden and main and main.Parent then
-						ui.Enabled = false
-					end
-				end)
-			else
-				ui.Enabled = true
-				main:TweenSize(UDim2.new(0, 720, 0, 500), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.25, true)
-			end
-		end
+		if not p and io.KeyCode == CloseBind then SetHidden(not hidden) end
 	end)
+	if TouchMode then
+		local MobileToggle = Make("TextButton", {
+			Parent = ui,
+			Name = "MobileToggle",
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 8, 0.5, 0),
+			Size = UDim2.fromOffset(50, 50),
+			BackgroundColor3 = PrimaryColor,
+			BorderSizePixel = 0,
+			Text = "SLR",
+			Font = Enum.Font.Code,
+			TextSize = 13,
+			TextColor3 = TextColor,
+			AutoButtonColor = false,
+			ZIndex = 200
+		})
+		ApplyCorner(MobileToggle, 25)
+		ApplyStroke(MobileToggle)
+		BindTheme(MobileToggle, "BackgroundColor3", "Primary")
+		BindTheme(MobileToggle, "TextColor3", "Text")
+		MobileToggle.Activated:Connect(function() SetHidden(not hidden) end)
+		local Minimize = Make("TextButton", {
+			Parent = topBar,
+			Name = "Minimize",
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -4, 0, 3),
+			Size = UDim2.fromOffset(34, 30),
+			BackgroundTransparency = 1,
+			Text = "—",
+			Font = Enum.Font.Code,
+			TextSize = 18,
+			TextColor3 = TextColor,
+			ZIndex = 20
+		})
+		BindTheme(Minimize, "TextColor3", "Text")
+		Minimize.Activated:Connect(function() SetHidden(true) end)
+		appName.Size = UDim2.new(0, 112, 0, 20)
+		tabStrip.Position = UDim2.new(0, 120, 0, 0)
+		tabStrip.Size = UDim2.new(1, -160, 1, 0)
+		local function CameraChanged()
+			task.defer(function() if main and main.Parent then ApplyWindowSize(false) end end)
+		end
+		local function BindCamera(Camera)
+			if Camera then Camera:GetPropertyChangedSignal("ViewportSize"):Connect(CameraChanged) end
+		end
+		BindCamera(workspace.CurrentCamera)
+		workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function() BindCamera(workspace.CurrentCamera) CameraChanged() end)
+	end
 	local pages = Instance.new("Folder")
 	pages.Name = "Pages"
 	pages.Parent = contentRoot
@@ -594,7 +663,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		ok.MouseLeave:Connect(function()
 			Tween(ok, 0.12, {BackgroundColor3 = PanelPrimary()})
 		end)
-		ok.MouseButton1Click:Connect(function()
+		ok.Activated:Connect(function()
 			Tween(overlay, 0.15, {BackgroundTransparency = 1})
 			box:TweenSize(UDim2.new(0, 0, 0, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.18, true)
 			task.delay(0.18, function()
@@ -648,8 +717,9 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			Size = UDim2.new(1, 0, 1, 0),
 			Visible = false
 		})
-		local _, leftScroll = CreateScrollingPanel(page, UDim2.new(0.5, -5, 1, 0), UDim2.new(0, 0, 0, 0), name)
-		local _, rightScroll = CreateScrollingPanel(page, UDim2.new(0.5, -5, 1, 0), UDim2.new(0.5, 5, 0, 0), "Options")
+		local leftPanel, leftScroll = CreateScrollingPanel(page, TouchMode and UDim2.new(1, 0, 1, 0) or UDim2.new(0.5, -5, 1, 0), UDim2.new(0, 0, 0, 0), name)
+		local rightPanel, rightScroll = CreateScrollingPanel(page, UDim2.new(0.5, -5, 1, 0), UDim2.new(0.5, 5, 0, 0), "Options")
+		if TouchMode then rightPanel.Visible = false end
 		local leftWeight = 0
 		local rightWeight = 0
 		local sectionParent = nil
@@ -669,6 +739,10 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			end
 		end
 		local function chooseContentParent(kind)
+			if TouchMode then
+				addWeight(leftScroll, weightFor(kind))
+				return leftScroll
+			end
 			if kind == "Label" then
 				sectionParent = leftWeight <= rightWeight and leftScroll or rightScroll
 				addWeight(sectionParent, weightFor(kind))
@@ -719,7 +793,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				Tween(selection, 0.12, {BackgroundTransparency = 1})
 			end
 		end)
-		button.MouseButton1Click:Connect(selectThisTab)
+		button.Activated:Connect(selectThisTab)
 		if not selectedPage then
 			selectThisTab()
 		end
@@ -753,7 +827,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			click.MouseLeave:Connect(function()
 				Tween(buttonFrame, 0.12, {BackgroundColor3 = PanelPrimary()})
 			end)
-			click.MouseButton1Click:Connect(function()
+			click.Activated:Connect(function()
 				pcall(callback)
 			end)
 			local api = {}
@@ -824,7 +898,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				end
 			end
 			apply()
-			hit.MouseButton1Click:Connect(function()
+			hit.Activated:Connect(function()
 				state = not state
 				apply()
 				pcall(callback, state)
@@ -897,6 +971,8 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			})
 			BindTheme(knob, "BackgroundColor3", "Secondary")
 			local dragging = false
+			local dragInput = nil
+			local touchHit = Make("Frame", {Parent = bar, BackgroundTransparency = 1, Active = true, Position = UDim2.new(0, 0, 0.5, -18), Size = UDim2.new(1, 0, 0, 36), ZIndex = 2})
 			local function setValue(v, fire)
 				currentValue = math.clamp(math.floor(v + 0.5), min, max)
 				local alpha = max == min and 0 or (currentValue - min) / (max - min)
@@ -912,21 +988,23 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				local alpha = math.clamp((input.Position.X - bar.AbsolutePosition.X) / math.max(bar.AbsoluteSize.X, 1), 0, 1)
 				setValue(min + ((max - min) * alpha), true)
 			end
-			bar.InputBegan:Connect(function(input)
-				if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			local function beginDrag(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 					dragging = true
+					dragInput = input
 					move(input)
 				end
-			end)
-			bar.InputEnded:Connect(function(input)
-				if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			end
+			touchHit.InputBegan:Connect(beginDrag)
+			bar.InputBegan:Connect(beginDrag)
+			UserInputService.InputEnded:Connect(function(input)
+				if input == dragInput or input.UserInputType == Enum.UserInputType.MouseButton1 then
 					dragging = false
+					dragInput = nil
 				end
 			end)
 			UserInputService.InputChanged:Connect(function(input)
-				if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-					move(input)
-				end
+				if dragging and (input == dragInput or input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then move(input) end
 			end)
 			local api = {}
 			function api:GetCurrentValue()
@@ -1036,7 +1114,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				if #currentList == 0 then
 					return 0
 				end
-				return math.min(#currentList * 28 + 8, 120)
+				return math.min(#currentList * (TouchMode and 38 or 28) + 8, TouchMode and 190 or 120)
 			end
 			local function setOpened(value)
 				opened = value and #currentList > 0
@@ -1057,7 +1135,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 						Parent = listHolder,
 						BackgroundColor3 = PanelSecondary(),
 						BorderSizePixel = 0,
-						Size = UDim2.new(1, 0, 0, 26),
+						Size = UDim2.new(1, 0, 0, TouchMode and 36 or 26),
 						Text = tostring(value),
 						Font = Enum.Font.Code,
 						TextSize = 12,
@@ -1089,7 +1167,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 					item.MouseLeave:Connect(function()
 						Tween(item, 0.1, {BackgroundColor3 = PanelSecondary()})
 					end)
-					item.MouseButton1Click:Connect(function()
+					item.Activated:Connect(function()
 						selectedValue = value
 						selected.Text = tostring(value)
 						setOpened(false)
@@ -1099,7 +1177,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				end
 			end
 			rebuild()
-			hit.MouseButton1Click:Connect(function()
+			hit.Activated:Connect(function()
 				setOpened(not opened)
 			end)
 			local api = {}
@@ -1232,7 +1310,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				if #currentList == 0 then
 					return 0
 				end
-				return math.min(#currentList * 28 + 8, 120)
+				return math.min(#currentList * (TouchMode and 38 or 28) + 8, TouchMode and 190 or 120)
 			end
 			local function setOpened(value)
 				opened = value and #currentList > 0
@@ -1253,7 +1331,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 						Parent = listHolder,
 						BackgroundColor3 = PanelSecondary(),
 						BorderSizePixel = 0,
-						Size = UDim2.new(1, 0, 0, 26),
+						Size = UDim2.new(1, 0, 0, TouchMode and 36 or 26),
 						Text = tostring(value),
 						Font = Enum.Font.Code,
 						TextSize = 12,
@@ -1298,7 +1376,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 					item.MouseLeave:Connect(function()
 						Tween(item, 0.1, {BackgroundColor3 = PanelSecondary()})
 					end)
-					item.MouseButton1Click:Connect(function()
+					item.Activated:Connect(function()
 						local index = table.find(currentValues, value)
 						if index then
 							table.remove(currentValues, index)
@@ -1312,7 +1390,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				end
 			end
 			rebuild()
-			hit.MouseButton1Click:Connect(function()
+			hit.Activated:Connect(function()
 				setOpened(not opened)
 			end)
 			local api = {}
@@ -1460,39 +1538,35 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				popup.Position = UDim2.new(0, pickerFrame.AbsolutePosition.X - main.AbsolutePosition.X + pickerFrame.AbsoluteSize.X - 190, 0, pickerFrame.AbsolutePosition.Y - main.AbsolutePosition.Y + 32)
 				popup.Visible = not popup.Visible
 			end
-			swatch.MouseButton1Click:Connect(openPopup)
+			swatch.Activated:Connect(openPopup)
+			local satInput = nil
+			local hueInput = nil
+			sat.Active = true
+			hue.Active = true
 			sat.InputBegan:Connect(function(input)
-				if input.UserInputType == Enum.UserInputType.MouseButton1 then
-					draggingSat = true
-				end
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingSat = true satInput = input end
 			end)
 			hue.InputBegan:Connect(function(input)
-				if input.UserInputType == Enum.UserInputType.MouseButton1 then
-					draggingHue = true
-				end
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingHue = true hueInput = input end
 			end)
 			UserInputService.InputEnded:Connect(function(input)
-				if input.UserInputType == Enum.UserInputType.MouseButton1 then
-					draggingSat = false
-					draggingHue = false
-				end
+				if input == satInput or input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSat = false satInput = nil end
+				if input == hueInput or input.UserInputType == Enum.UserInputType.MouseButton1 then draggingHue = false hueInput = nil end
 			end)
 			UserInputService.InputChanged:Connect(function(input)
-				if input.UserInputType ~= Enum.UserInputType.MouseMovement then
-					return
-				end
-				if draggingSat then
+				if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+				if draggingSat and (not satInput or input == satInput or input.UserInputType == Enum.UserInputType.MouseMovement) then
 					local x = math.clamp((input.Position.X - sat.AbsolutePosition.X) / sat.AbsoluteSize.X, 0, 1)
 					local y = math.clamp((input.Position.Y - sat.AbsolutePosition.Y) / sat.AbsoluteSize.Y, 0, 1)
 					satValue = x
 					valValue = 1 - y
 					applyFromHSV(true)
-				elseif draggingHue then
+				elseif draggingHue and (not hueInput or input == hueInput or input.UserInputType == Enum.UserInputType.MouseMovement) then
 					hueValue = math.clamp((input.Position.Y - hue.AbsolutePosition.Y) / hue.AbsoluteSize.Y, 0, 1)
 					applyFromHSV(true)
 				end
 			end)
-			rainbow.MouseButton1Click:Connect(function()
+			rainbow.Activated:Connect(function()
 				rainbowEnabled = not rainbowEnabled
 				rainbow.Text = rainbowEnabled and "Rainbow: On" or "Rainbow: Off"
 				if rainbowConnection then
@@ -1660,23 +1734,19 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				TextColor3 = SecondaryColor
 			})
 			BindTheme(keyLabel, "TextColor3", "Secondary")
-			hit.MouseButton1Click:Connect(function()
-				if waiting then
-					return
-				end
+			if TouchMode then keyLabel.Text = "TAP" end
+			hit.Activated:Connect(function()
+				if TouchMode then pcall(callback) return end
+				if waiting then return end
 				waiting = true
 				keyLabel.Text = "..."
 				local input = UserInputService.InputBegan:Wait()
-				if input.KeyCode and input.KeyCode ~= Enum.KeyCode.Unknown then
-					key = input.KeyCode.Name
-					keyLabel.Text = key
-				else
-					keyLabel.Text = key
-				end
+				if input.KeyCode and input.KeyCode ~= Enum.KeyCode.Unknown then key = input.KeyCode.Name end
+				keyLabel.Text = key
 				waiting = false
 			end)
 			UserInputService.InputBegan:Connect(function(current, pressed)
-				if not pressed and not waiting and current.KeyCode.Name == key then
+				if not TouchMode and not pressed and not waiting and current.KeyCode.Name == key then
 					pcall(callback)
 				end
 			end)
