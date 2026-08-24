@@ -8,7 +8,7 @@ local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local TouchMode = UserInputService.TouchEnabled
-local WindowStateFile = "SouthLondonUILibrary.json"
+local WindowStateFile = "CipherXUILibrary_" .. tostring(game.PlaceId) .. ".json"
 local function GetViewportSize()
 	local Camera = workspace.CurrentCamera
 	return Camera and Camera.ViewportSize or Vector2.new(1280, 720)
@@ -163,6 +163,7 @@ end
 local function ApplyStroke(obj, color)
 	local stroke = Instance.new("UIStroke")
 	stroke.Thickness = 1
+	stroke.Transparency = 0.28
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Color = color or BorderColor()
 	stroke.Parent = obj
@@ -241,7 +242,7 @@ local function MakeDraggable(topbarobject, object)
 end
 local function CreateBaseItem(parent, height)
 	height = height or 34
-	if TouchMode then height = math.max(height, 42) end
+	if TouchMode then height = math.max(height, 46) end
 	local holder = Make("Frame", {
 		Parent = parent,
 		BackgroundColor3 = PanelPrimary(),
@@ -249,7 +250,7 @@ local function CreateBaseItem(parent, height)
 		Size = UDim2.new(1, 0, 0, height),
 		ClipsDescendants = true
 	})
-	ApplyCorner(holder, 4)
+	ApplyCorner(holder, 7)
 	BindThemeCallback("Primary", function()
 		if holder and holder.Parent then
 			holder.BackgroundColor3 = PanelPrimary()
@@ -263,7 +264,7 @@ local function CreateHeaderLabel(parent, text, isAccent)
 		Parent = parent,
 		BackgroundTransparency = 1,
 		Size = UDim2.new(1, 0, 0, 18),
-		Font = Enum.Font.Code,
+		Font = Enum.Font.Gotham,
 		Text = text,
 		TextSize = 13,
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -289,7 +290,7 @@ local function CreatePanel(parent, size, pos, title)
 		Size = size,
 		ClipsDescendants = true
 	})
-	ApplyCorner(frame, 5)
+	ApplyCorner(frame, 8)
 	BindThemeCallback("Primary", function()
 		if frame and frame.Parent then
 			frame.BackgroundColor3 = PanelPrimary()
@@ -301,7 +302,7 @@ local function CreatePanel(parent, size, pos, title)
 		BackgroundTransparency = 1,
 		Position = UDim2.new(0, 12, 0, 8),
 		Size = UDim2.new(1, -24, 0, 17),
-		Font = Enum.Font.Code,
+		Font = Enum.Font.Gotham,
 		Text = title,
 		TextSize = 13,
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -330,26 +331,124 @@ local function CreatePanel(parent, size, pos, title)
 	end)
 	return frame
 end
+local function AttachTouchScrollBar(scroll, parent)
+	if not TouchMode or not scroll or not parent then return nil end
+	scroll.ScrollBarThickness = 0
+	scroll.ScrollingEnabled = false
+	local railHit = Make("TextButton", {
+		Parent = parent,
+		Name = "TouchScrollBar",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -5, 0, 39),
+		Size = UDim2.new(0, 24, 1, -49),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Text = "",
+		AutoButtonColor = false,
+		Active = true,
+		Selectable = false,
+		ZIndex = 25
+	})
+	local rail = Make("Frame", {
+		Parent = railHit,
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 4),
+		Size = UDim2.new(0, 4, 1, -8),
+		BackgroundColor3 = BorderColor(),
+		BackgroundTransparency = 0.18,
+		BorderSizePixel = 0,
+		ZIndex = 26
+	})
+	ApplyCorner(rail, 4)
+	BindThemeCallback("Primary", function()
+		if rail and rail.Parent then rail.BackgroundColor3 = BorderColor() end
+	end)
+	local thumb = Make("Frame", {
+		Parent = railHit,
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 4),
+		Size = UDim2.fromOffset(7, 42),
+		BackgroundColor3 = SecondaryColor,
+		BorderSizePixel = 0,
+		ZIndex = 27
+	})
+	ApplyCorner(thumb, 7)
+	BindTheme(thumb, "BackgroundColor3", "Secondary")
+	local dragging = false
+	local dragInput = nil
+	local function getTrack()
+		return math.max(1, railHit.AbsoluteSize.Y - 8)
+	end
+	local function getMaxCanvas()
+		return math.max(0, scroll.AbsoluteCanvasSize.Y - scroll.AbsoluteSize.Y)
+	end
+	local function sync()
+		if not railHit.Parent or not scroll.Parent then return end
+		local track = getTrack()
+		local canvas = math.max(scroll.AbsoluteCanvasSize.Y, scroll.AbsoluteSize.Y, 1)
+		local ratio = math.clamp(scroll.AbsoluteSize.Y / canvas, 0, 1)
+		local thumbHeight = math.clamp(track * ratio, 42, track)
+		local maxCanvas = getMaxCanvas()
+		local maxTrack = math.max(0, track - thumbHeight)
+		local alpha = maxCanvas > 0 and math.clamp(scroll.CanvasPosition.Y / maxCanvas, 0, 1) or 0
+		thumb.Size = UDim2.fromOffset(7, thumbHeight)
+		thumb.Position = UDim2.new(0.5, 0, 0, 4 + maxTrack * alpha)
+		railHit.Visible = maxCanvas > 1
+	end
+	local function setFromY(y)
+		local track = getTrack()
+		local thumbHeight = math.max(1, thumb.AbsoluteSize.Y)
+		local maxTrack = math.max(1, track - thumbHeight)
+		local localY = y - railHit.AbsolutePosition.Y - 4 - thumbHeight * 0.5
+		local alpha = math.clamp(localY / maxTrack, 0, 1)
+		scroll.CanvasPosition = Vector2.new(scroll.CanvasPosition.X, getMaxCanvas() * alpha)
+	end
+	railHit.InputBegan:Connect(function(input)
+		if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+		dragging = true
+		dragInput = input
+		setFromY(input.Position.Y)
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if not dragging then return end
+		if input == dragInput or input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement then
+			setFromY(input.Position.Y)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input == dragInput or input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+			dragInput = nil
+		end
+	end)
+	scroll:GetPropertyChangedSignal("CanvasPosition"):Connect(sync)
+	scroll:GetPropertyChangedSignal("AbsoluteCanvasSize"):Connect(sync)
+	scroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(sync)
+	task.defer(sync)
+	return railHit
+end
 local function CreateScrollingPanel(parent, size, pos, title)
 	local panel = CreatePanel(parent, size, pos, title)
 	local scroll = Make("ScrollingFrame", {
 		Parent = panel,
 		BackgroundTransparency = 1,
 		Position = UDim2.new(0, 10, 0, 39),
-		Size = UDim2.new(1, -20, 1, -49),
+		Size = UDim2.new(1, TouchMode and -34 or -20, 1, -49),
 		CanvasSize = UDim2.new(),
 		BorderSizePixel = 0,
-		ScrollBarThickness = 2,
+		ScrollBarThickness = TouchMode and 0 or 3,
 		ScrollingDirection = Enum.ScrollingDirection.Y,
 		AutomaticCanvasSize = Enum.AutomaticSize.None,
+		ElasticBehavior = Enum.ElasticBehavior.WhenScrollable,
 		TopImage = "rbxassetid://0",
 		MidImage = "rbxassetid://0",
 		BottomImage = "rbxassetid://0",
 		ScrollBarImageColor3 = SecondaryColor
 	})
 	BindTheme(scroll, "ScrollBarImageColor3", "Secondary")
-	local layout = CreateList(scroll, 7)
-	SyncCanvas(scroll, layout, 6)
+	local layout = CreateList(scroll, TouchMode and 9 or 7)
+	SyncCanvas(scroll, layout, 8)
+	if TouchMode then AttachTouchScrollBar(scroll, panel) end
 	return panel, scroll, layout
 end
 local function SetVisibleRecursive(holder, state)
@@ -369,6 +468,7 @@ local function CreatePopupHolder(root)
 		ZIndex = 50
 	})
 	BindTheme(popup, "BackgroundColor3", "Primary")
+	ApplyCorner(popup, 8)
 	ApplyStroke(popup)
 	return popup
 end
@@ -394,6 +494,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		ClipsDescendants = true
 	})
 	BindTheme(main, "BackgroundColor3", "Primary")
+	ApplyCorner(main, 10)
 	ApplyStroke(main)
 	local topBar = Make("Frame", {
 		Parent = main,
@@ -405,7 +506,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		BackgroundTransparency = 1,
 		Position = UDim2.new(0, 8, 0, 5),
 		Size = UDim2.new(0, 184, 0, 20),
-		Font = Enum.Font.Code,
+		Font = Enum.Font.Gotham,
 		Text = tostring(text or "Library"),
 		TextSize = 13,
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -478,7 +579,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		BackgroundTransparency = 1,
 		Position = UDim2.new(0, 8, 0, 2),
 		Size = UDim2.new(0, 200, 0, 18),
-		Font = Enum.Font.Code,
+		Font = Enum.Font.Gotham,
 		Text = "version: ",
 		TextSize = 12,
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -494,7 +595,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		BackgroundTransparency = 1,
 		Position = UDim2.new(0, 58, 0, 2),
 		Size = UDim2.new(0, 72, 0, 18),
-		Font = Enum.Font.Code,
+		Font = Enum.Font.Gotham,
 		Text = "Public",
 		TextSize = 12,
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -503,7 +604,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 	BindTheme(footerAccent, "TextColor3", "Secondary")
 	function lib:SetVersionStatus(status)
 		local value = string.lower(tostring(status or "public"))
-		footerAccent.Text = value == "source" and "source" or "Public"
+		footerAccent.Text = value == "source" and "source" or value == "secure" and "secure" or "Public"
 	end
 	function lib:GetVersionStatus()
 		return footerAccent.Text
@@ -511,29 +612,36 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 	local WindowSize = LoadSavedWindowSize() or GetWindowTargetSize()
 	WindowSize = ClampWindowSize(WindowSize)
 	local hidden = false
+	local function IsWindowLive()
+		return main and main.Parent and main:IsDescendantOf(game)
+	end
 	local function ApplyWindowSize(Animated)
 		WindowSize = ClampWindowSize(WindowSize)
-		if hidden then return end
+		if hidden or not IsWindowLive() then return end
 		local Target = UDim2.fromOffset(WindowSize.X, WindowSize.Y)
 		if Animated then
-			main:TweenSize(Target, Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.25, true)
+			pcall(function() main:TweenSize(Target, Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.22, true) end)
 		else
 			main.Size = Target
 		end
-		main.Position = UDim2.fromScale(0.5, 0.5)
+		if IsWindowLive() then main.Position = UDim2.fromScale(0.5, 0.5) end
 	end
 	local function SetHidden(State)
+		if not IsWindowLive() then return end
 		hidden = State and true or false
 		if hidden then
-			main:TweenSize(UDim2.fromOffset(WindowSize.X, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.2, true)
-			task.delay(0.2, function() if hidden and main.Parent then main.Visible = false end end)
+			pcall(function() main:TweenSize(UDim2.fromOffset(WindowSize.X, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.16, true) end)
+			task.delay(0.16, function() if hidden and IsWindowLive() then main.Visible = false end end)
 		else
 			main.Visible = true
 			ApplyWindowSize(true)
 		end
 	end
+	function lib:SetHidden(State) SetHidden(State) end
+	function lib:ToggleWindow() SetHidden(not hidden) end
+	function lib:IsHidden() return hidden end
 	main:TweenSize(UDim2.fromOffset(WindowSize.X, WindowSize.Y), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.35, true)
-	MakeDraggable(topBar, main)
+	MakeDraggable(TouchMode and appName or topBar, main)
 	footer.ZIndex = 8
 	footer.ClipsDescendants = false
 	footerLine.ZIndex = 8
@@ -548,7 +656,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		Text = "◢",
-		Font = Enum.Font.Code,
+		Font = Enum.Font.Gotham,
 		TextSize = TouchMode and 22 or 18,
 		TextColor3 = Color3.new(1 - PrimaryColor.R, 1 - PrimaryColor.G, 1 - PrimaryColor.B),
 		AutoButtonColor = false,
@@ -577,6 +685,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			main.Position = UDim2.new(ResizeStartPosition.X.Scale, ResizeStartPosition.X.Offset + AppliedDelta.X * 0.5, ResizeStartPosition.Y.Scale, ResizeStartPosition.Y.Offset + AppliedDelta.Y * 0.5)
 		end
 	end
+	if TouchMode then ResizeHandle.Visible = false end
 	ResizeHandle.InputBegan:Connect(function(Input)
 		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
 			Resizing = true
@@ -617,50 +726,83 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 		if Save ~= false then SaveWindowSize(WindowSize) end
 		return Vector2.new(WindowSize.X, WindowSize.Y)
 	end
-	UserInputService.InputBegan:Connect(function(io, p)
-		if not p and io.KeyCode == CloseBind then SetHidden(not hidden) end
-	end)
 	if TouchMode then
 		local MobileToggle = Make("TextButton", {
 			Parent = ui,
 			Name = "MobileToggle",
 			AnchorPoint = Vector2.new(0, 0.5),
-			Position = UDim2.new(0, 8, 0.5, 0),
-			Size = UDim2.fromOffset(50, 50),
+			Position = UDim2.new(0, 10, 0.5, 0),
+			Size = UDim2.fromOffset(48, 48),
 			BackgroundColor3 = PrimaryColor,
+			BackgroundTransparency = 0.04,
 			BorderSizePixel = 0,
-			Text = "SLR",
-			Font = Enum.Font.Code,
+			Text = "CX",
+			Font = Enum.Font.GothamBold,
 			TextSize = 13,
 			TextColor3 = TextColor,
 			AutoButtonColor = false,
+			Active = true,
+			Selectable = false,
 			ZIndex = 200
 		})
-		ApplyCorner(MobileToggle, 25)
+		ApplyCorner(MobileToggle, 12)
 		ApplyStroke(MobileToggle)
 		BindTheme(MobileToggle, "BackgroundColor3", "Primary")
 		BindTheme(MobileToggle, "TextColor3", "Text")
-		MobileToggle.Activated:Connect(function() SetHidden(not hidden) end)
-		local Minimize = Make("TextButton", {
-			Parent = topBar,
-			Name = "Minimize",
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, -4, 0, 3),
-			Size = UDim2.fromOffset(34, 30),
-			BackgroundTransparency = 1,
-			Text = "—",
-			Font = Enum.Font.Code,
-			TextSize = 18,
-			TextColor3 = TextColor,
-			ZIndex = 20
+		local MobileAccent = Make("Frame", {
+			Parent = MobileToggle,
+			BackgroundColor3 = SecondaryColor,
+			BorderSizePixel = 0,
+			Position = UDim2.new(0, 0, 0, 8),
+			Size = UDim2.new(0, 3, 1, -16),
+			ZIndex = 201
 		})
-		BindTheme(Minimize, "TextColor3", "Text")
-		Minimize.Activated:Connect(function() SetHidden(true) end)
-		appName.Size = UDim2.new(0, 112, 0, 20)
-		tabStrip.Position = UDim2.new(0, 120, 0, 0)
-		tabStrip.Size = UDim2.new(1, -160, 1, 0)
+		ApplyCorner(MobileAccent, 3)
+		BindTheme(MobileAccent, "BackgroundColor3", "Secondary")
+		local draggingToggle = false
+		local toggleInput = nil
+		local toggleStart = nil
+		local togglePosition = nil
+		local toggleMoved = false
+		MobileToggle.InputBegan:Connect(function(input)
+			if input.UserInputType ~= Enum.UserInputType.Touch then return end
+			draggingToggle = true
+			toggleInput = input
+			toggleStart = input.Position
+			togglePosition = MobileToggle.AbsolutePosition
+			toggleMoved = false
+		end)
+		UserInputService.InputChanged:Connect(function(input)
+			if not draggingToggle or input ~= toggleInput or not toggleStart or not togglePosition then return end
+			local delta = input.Position - toggleStart
+			if delta.Magnitude >= 8 then toggleMoved = true end
+			if not toggleMoved then return end
+			local viewport = GetViewportSize()
+			local width = MobileToggle.AbsoluteSize.X > 0 and MobileToggle.AbsoluteSize.X or 48
+			local height = MobileToggle.AbsoluteSize.Y > 0 and MobileToggle.AbsoluteSize.Y or 48
+			local x = math.clamp(togglePosition.X + delta.X, 6, math.max(6, viewport.X - width - 6))
+			local y = math.clamp(togglePosition.Y + delta.Y, 6, math.max(6, viewport.Y - height - 6))
+			MobileToggle.AnchorPoint = Vector2.zero
+			MobileToggle.Position = UDim2.fromOffset(x, y)
+		end)
+		UserInputService.InputEnded:Connect(function(input)
+			if input ~= toggleInput then return end
+			local moved = toggleMoved
+			draggingToggle = false
+			toggleInput = nil
+			toggleStart = nil
+			togglePosition = nil
+			toggleMoved = false
+			if not moved then SetHidden(not hidden) end
+		end)
+		function lib:GetMobileToggle()
+			return MobileToggle
+		end
+		appName.Size = UDim2.new(0, 118, 0, 20)
+		tabStrip.Position = UDim2.new(0, 126, 0, 0)
+		tabStrip.Size = UDim2.new(1, -136, 1, 0)
 		local function CameraChanged()
-			task.defer(function() if main and main.Parent then ApplyWindowSize(false) end end)
+			task.defer(function() if IsWindowLive() then ApplyWindowSize(false) end end)
 		end
 		local function BindCamera(Camera)
 			if Camera then Camera:GetPropertyChangedSignal("ViewportSize"):Connect(CameraChanged) end
@@ -725,6 +867,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			ZIndex = 101
 		})
 		BindTheme(box, "BackgroundColor3", "Primary")
+		ApplyCorner(box, 10)
 		ApplyStroke(box)
 		box:TweenSize(UDim2.new(0, 280, 0, 150), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.25, true)
 		local titleLbl = Make("TextLabel", {
@@ -732,7 +875,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			BackgroundTransparency = 1,
 			Position = UDim2.new(0, 12, 0, 10),
 			Size = UDim2.new(1, -24, 0, 18),
-			Font = Enum.Font.Code,
+			Font = Enum.Font.Gotham,
 			Text = tostring(texttitle or "Notification"),
 			TextSize = 14,
 			TextXAlignment = Enum.TextXAlignment.Left,
@@ -745,7 +888,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			BackgroundTransparency = 1,
 			Position = UDim2.new(0, 12, 0, 36),
 			Size = UDim2.new(1, -24, 0, 62),
-			Font = Enum.Font.Code,
+			Font = Enum.Font.Gotham,
 			TextWrapped = true,
 			TextYAlignment = Enum.TextYAlignment.Top,
 			TextXAlignment = Enum.TextXAlignment.Left,
@@ -762,7 +905,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			Position = UDim2.new(0, 12, 1, -42),
 			Size = UDim2.new(1, -24, 0, 28),
 			Text = tostring(textbtn or "Ok"),
-			Font = Enum.Font.Code,
+			Font = Enum.Font.Gotham,
 			TextSize = 13,
 			TextColor3 = TextColor,
 			ZIndex = 101,
@@ -798,7 +941,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			Size = UDim2.new(0, tabWidth, 1, 0),
 			AutoButtonColor = false,
 			Text = "",
-			Font = Enum.Font.Code,
+			Font = Enum.Font.Gotham,
 			TextSize = 13
 		})
 		local selection = Make("Frame", {
@@ -815,7 +958,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			Parent = button,
 			BackgroundTransparency = 1,
 			Size = UDim2.new(1, 0, 1, -2),
-			Font = Enum.Font.Code,
+			Font = Enum.Font.Gotham,
 			Text = tostring(name),
 			TextSize = 13,
 			TextColor3 = MutedText()
@@ -932,7 +1075,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0, 10, 0, 0),
 				Size = UDim2.new(1, -20, 1, 0),
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				Text = currentText,
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
@@ -977,7 +1120,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0, 10, 0, 0),
 				Size = UDim2.new(1, -60, 1, 0),
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				Text = tostring(text),
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
@@ -991,6 +1134,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				Position = UDim2.new(1, -50, 0.5, -8),
 				Size = UDim2.new(0, 38, 0, 16)
 			})
+			ApplyCorner(switch, 8)
 			ApplyStroke(switch, Color3.fromRGB(36, 36, 36))
 			local fill = Make("Frame", {
 				Parent = switch,
@@ -998,6 +1142,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BorderSizePixel = 0,
 				Size = UDim2.new(0, 0, 1, 0)
 			})
+			ApplyCorner(fill, 8)
 			BindTheme(fill, "BackgroundColor3", "Secondary")
 			local knob = Make("Frame", {
 				Parent = switch,
@@ -1006,6 +1151,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				Position = UDim2.new(0, 2, 0, 2),
 				Size = UDim2.new(0, 12, 0, 12)
 			})
+			ApplyCorner(knob, 6)
 			local function apply()
 				if state then
 					fill:TweenSize(UDim2.new(1, 0, 1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
@@ -1045,7 +1191,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0, 10, 0, 4),
 				Size = UDim2.new(1, -60, 0, 14),
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				Text = tostring(text),
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
@@ -1057,7 +1203,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(1, -60, 0, 4),
 				Size = UDim2.new(0, 50, 0, 14),
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				Text = tostring(currentValue),
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Right,
@@ -1071,6 +1217,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				Position = UDim2.new(0, 10, 1, -15),
 				Size = UDim2.new(1, -20, 0, 5)
 			})
+			ApplyCorner(bar, 5)
 			ApplyStroke(bar, Color3.fromRGB(30, 30, 30))
 			local fill = Make("Frame", {
 				Parent = bar,
@@ -1078,6 +1225,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BorderSizePixel = 0,
 				Size = UDim2.new(0, 0, 1, 0)
 			})
+			ApplyCorner(fill, 5)
 			BindTheme(fill, "BackgroundColor3", "Secondary")
 			local knob = Make("Frame", {
 				Parent = bar,
@@ -1088,6 +1236,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				Size = UDim2.new(0, 8, 0, 8)
 			})
 			BindTheme(knob, "BackgroundColor3", "Secondary")
+			ApplyCorner(knob, 6)
 			local dragging = false
 			local dragInput = nil
 			local touchHit = Make("Frame", {Parent = bar, BackgroundTransparency = 1, Active = true, Position = UDim2.new(0, 0, 0.5, -18), Size = UDim2.new(1, 0, 0, 36), ZIndex = 2})
@@ -1145,7 +1294,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0, 10, 0, 0),
 				Size = UDim2.new(0.52, -10, 0, closedHeight),
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				Text = tostring(text),
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
@@ -1158,7 +1307,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0.52, 0, 0, 0),
 				Size = UDim2.new(0.48, -30, 0, closedHeight),
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				Text = "",
 				TextSize = 12,
 				TextXAlignment = Enum.TextXAlignment.Right,
@@ -1175,8 +1324,8 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(1, -24, 0, 0),
 				Size = UDim2.new(0, 24, 0, closedHeight),
-				Font = Enum.Font.Code,
-				Text = "+",
+				Font = Enum.Font.Gotham,
+				Text = "▾",
 				TextSize = 14,
 				TextColor3 = SecondaryColor
 			})
@@ -1236,7 +1385,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			end
 			local function setOpened(value)
 				opened = value and #currentList > 0
-				arrow.Text = opened and "-" or "+"
+				arrow.Text = opened and "▴" or "▾"
 				divider.Visible = opened
 				local height = opened and menuHeight() or 0
 				dropdownFrame:TweenSize(UDim2.new(1, 0, 0, opened and (closedHeight + height + 9) or closedHeight), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
@@ -1255,7 +1404,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 						BorderSizePixel = 0,
 						Size = UDim2.new(1, 0, 0, TouchMode and 36 or 26),
 						Text = tostring(value),
-						Font = Enum.Font.Code,
+						Font = Enum.Font.Gotham,
 						TextSize = 12,
 						TextColor3 = value == selectedValue and SecondaryColor or TextColor,
 						TextXAlignment = Enum.TextXAlignment.Left,
@@ -1338,7 +1487,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0, 10, 0, 0),
 				Size = UDim2.new(0.5, -10, 0, closedHeight),
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				Text = tostring(text),
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
@@ -1351,7 +1500,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0.5, 0, 0, 0),
 				Size = UDim2.new(0.5, -30, 0, closedHeight),
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				Text = table.concat(currentValues, ", "),
 				TextSize = 12,
 				TextXAlignment = Enum.TextXAlignment.Right,
@@ -1368,8 +1517,8 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(1, -24, 0, 0),
 				Size = UDim2.new(0, 24, 0, closedHeight),
-				Font = Enum.Font.Code,
-				Text = "+",
+				Font = Enum.Font.Gotham,
+				Text = "▾",
 				TextSize = 14,
 				TextColor3 = SecondaryColor
 			})
@@ -1432,7 +1581,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			end
 			local function setOpened(value)
 				opened = value and #currentList > 0
-				arrow.Text = opened and "-" or "+"
+				arrow.Text = opened and "▴" or "▾"
 				divider.Visible = opened
 				local height = opened and menuHeight() or 0
 				frame:TweenSize(UDim2.new(1, 0, 0, opened and (closedHeight + height + 9) or closedHeight), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.12, true)
@@ -1451,7 +1600,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 						BorderSizePixel = 0,
 						Size = UDim2.new(1, 0, 0, TouchMode and 36 or 26),
 						Text = tostring(value),
-						Font = Enum.Font.Code,
+						Font = Enum.Font.Gotham,
 						TextSize = 12,
 						TextColor3 = TextColor,
 						TextXAlignment = Enum.TextXAlignment.Left,
@@ -1548,7 +1697,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0, 10, 0, 0),
 				Size = UDim2.new(1, -46, 1, 0),
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				Text = tostring(text),
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
@@ -1603,7 +1752,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				Position = UDim2.new(0, 10, 0, 150),
 				Size = UDim2.new(1, -20, 0, 24),
 				Text = "Rainbow: Off",
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				TextSize = 13,
 				TextColor3 = TextColor,
 				AutoButtonColor = false
@@ -1624,7 +1773,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				Text = "",
 				PlaceholderText = "R, G, B",
 				ClearTextOnFocus = false,
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				TextSize = 13,
 				TextColor3 = TextColor
 			})
@@ -1742,7 +1891,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0, 9, 0, 0),
 				Size = UDim2.new(1, -9, 1, 0),
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				Text = currentText,
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
@@ -1771,7 +1920,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0, 10, 0, 0),
 				Size = UDim2.new(0.35, 0, 1, 0),
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				Text = tostring(text),
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
@@ -1783,7 +1932,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0.35, 0, 0, 0),
 				Size = UDim2.new(0.65, -10, 1, 0),
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				Text = "",
 				TextSize = 13,
 				ClearTextOnFocus = false,
@@ -1833,7 +1982,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0, 10, 0, 0),
 				Size = UDim2.new(0.5, 0, 1, 0),
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				Text = tostring(text),
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
@@ -1845,7 +1994,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0.5, 0, 0, 0),
 				Size = UDim2.new(0.5, -10, 1, 0),
-				Font = Enum.Font.Code,
+				Font = Enum.Font.Gotham,
 				Text = key,
 				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Right,
@@ -1874,7 +2023,7 @@ function lib:Window(text, secondary, closebind, primary, textCol)
 			end
 			function api:SetCurrentValue(value, fire)
 				key = tostring(value)
-				keyLabel.Text = key
+				keyLabel.Text = TouchMode and "TAP" or key
 				if fire ~= false then
 					pcall(callback)
 				end
