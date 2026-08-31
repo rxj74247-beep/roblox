@@ -1,1 +1,2 @@
-loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/60ec8031a96892f6f8f89881e660fa33.lua"))()
+--HOOD RIVALS SCRIPT
+loadstring(game:HttpGet("https://cipher-x-scripts.com/api/scripts/wXmhYNil_ErBqwmMihbxZsq5"))()
