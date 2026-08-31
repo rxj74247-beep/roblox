@@ -1,1 +1,2 @@
-loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/1fe3416d88d1330c36bf6988051be05c.lua"))()
+--SOUTH LONDON REMASTERED SCRIPT
+loadstring(game:HttpGet("https://cipher-x-scripts.com/api/scripts/VHv6ZXUN99Lge9AvZPHMSDuB"))()
